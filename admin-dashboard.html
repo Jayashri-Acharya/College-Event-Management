@@ -150,10 +150,10 @@
 
     <ul class="menu">
       <li><a href="#">Dashboard</a></li>
-      <li><a href="#">Manage Events</a></li>
-      <li><a href="#">Manage Competitions</a></li>
+      <li><a href="manage-events.html">Manage Events</a></li>
+      <li><a href="manage-competitions.html">Manage Competitions</a></li>
+      <a href="#">Manage HomeScreen</a>
       <li><a href="#">View Registrations</a></li>
-      <li><a href="#">Reports</a></li>
       <li><a href="login.html">Logout</a></li>
     </ul>
   </div>
@@ -176,15 +176,15 @@
       </div>
 
       <div class="card">
-        <h3>Registered Students</h3>
-        <p id="totalStudents">0</p>
+        <h3>Total Registrations</h3>
+        <p id="totalRegistrations">0</p>
       </div>
     </div>
 
     <div class="table-section">
       <h3 style="margin-bottom:15px;">Recent Events</h3>
 
-      <table id="eventsTable">
+      <table>
         <thead>
           <tr>
             <th>Event Name</th>
@@ -192,49 +192,70 @@
             <th>Venue</th>
           </tr>
         </thead>
-        <tbody id="eventsBody">
-        </tbody>
+        <tbody id="eventsBody"></tbody>
       </table>
     </div>
 
   </div>
 
-  <script>
+  <!-- Firebase Script -->
+  <script type="module">
 
-    // Get data from localStorage
-    let events = JSON.parse(localStorage.getItem("events")) || [];
-    let competitions = JSON.parse(localStorage.getItem("competitions")) || [];
-    let students = JSON.parse(localStorage.getItem("students")) || [];
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Update counts
-    document.getElementById("totalEvents").innerText = events.length;
-    document.getElementById("totalCompetitions").innerText = competitions.length;
-    document.getElementById("totalStudents").innerText = students.length;
+    // 🔥 PASTE YOUR REAL FIREBASE CONFIG HERE
+    const firebaseConfig = {
+      apiKey:  "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
+      authDomain: "event-management-system-ea793.firebaseapp.com",
+      projectId: "event-management-system-ea793",
+    };
 
-    // Populate recent events table
-    const eventsBody = document.getElementById("eventsBody");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    if(events.length === 0){
+    async function loadDashboard() {
+
+      const eventsSnapshot = await getDocs(collection(db, "events"));
+      const competitionsSnapshot = await getDocs(collection(db, "competitions"));
+      const registrationsSnapshot = await getDocs(collection(db, "registrations"));
+
+      document.getElementById("totalEvents").innerText = eventsSnapshot.size;
+      document.getElementById("totalCompetitions").innerText = competitionsSnapshot.size;
+      document.getElementById("totalRegistrations").innerText = registrationsSnapshot.size;
+
+      const eventsBody = document.getElementById("eventsBody");
+      eventsBody.innerHTML = "";
+
+      if(eventsSnapshot.empty){
         eventsBody.innerHTML = `
           <tr>
-            <td colspan="3" class="no-data">
-              No events available
-            </td>
+            <td colspan="3" class="no-data">No events available</td>
           </tr>
         `;
-    } else {
-        events.slice(-5).reverse().forEach(event => {
-            eventsBody.innerHTML += `
-              <tr>
-                <td>${event.name}</td>
-                <td>${event.date}</td>
-                <td>${event.venue}</td>
-              </tr>
-            `;
+      } else {
+        eventsSnapshot.forEach(doc => {
+          const event = doc.data();
+
+          eventsBody.innerHTML += `
+            <tr>
+              <td>${event.name}</td>
+              <td>${event.date}</td>
+              <td>${event.venue}</td>
+            </tr>
+          `;
         });
+      }
     }
+
+    loadDashboard();
 
   </script>
 
 </body>
 </html>
+
