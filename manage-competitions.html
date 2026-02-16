@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Competitions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+    body{display:flex;height:100vh;background:#f4f6f9;}
+    .sidebar{width:240px;background:linear-gradient(180deg,#5f2c82,#49a09d);color:white;padding:30px 20px;}
+    .sidebar h2{margin-bottom:40px;}
+    .sidebar a{display:block;color:white;text-decoration:none;margin-bottom:15px;padding:10px;border-radius:8px;}
+    .sidebar a:hover{background:rgba(255,255,255,0.2);}
+    .main{flex:1;padding:40px;overflow:auto;}
+    h1{margin-bottom:20px;}
+    .form{background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);margin-bottom:30px;}
+    input,select{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
+    button{padding:10px 15px;background:#5f2c82;color:white;border:none;border-radius:8px;cursor:pointer;}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;}
+    th,td{padding:12px;border-bottom:1px solid #eee;}
+    th{background:#f4f6f9;}
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Admin Panel</h2>
+  <a href="admin-dashboard.html">Dashboard</a>
+  <a href="manage-events.html">Manage Events</a>
+  <a href="manage-competitions.html">Manage Competitions</a>
+  <a href="#">Manage HomeScreen</a>
+  <a href="#">View Registrations</a>
+  <a href="login.html">Logout</a>
+</div>
+
+<div class="main">
+  <h1>Manage Competitions</h1>
+
+  <div class="form">
+    <input type="text" id="theme" placeholder="Competition (Ex: Hackathon, Coding Challenge)">
+
+    <select id="category">
+      <option value="">Select Internal / External</option>
+      <option value="Internal">Internal</option>
+      <option value="External">External</option>
+    </select>
+
+    <!-- Club Dropdown -->
+    <div id="clubContainer">
+      <select id="club">
+        <option value="">Select Club</option>
+        <option value="Coding Club">Coding Club</option>
+        <option value="Cultural Club">Cultural Club</option>
+        <option value="Sports Club">Sports Club</option>
+        <option value="Management Club">Management Club</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <!-- Event Dropdown -->
+    <select id="eventSelect">
+      <option value="">Select Event</option>
+    </select>
+
+    <!-- Upload Rules -->
+    <input type="file" id="rulesFile" accept=".pdf,.doc,.docx">
+
+    <button id="submitBtn" onclick="handleSubmit()">Add Competition</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Theme</th>
+        <th>Category</th>
+        <th>Club</th>
+        <th>Event</th>
+        <th>Rules File</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="competitionTable"></tbody>
+  </table>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
+  authDomain: "event-management-system-ea793.firebaseapp.com",
+  projectId: "event-management-system-ea793"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const eventsCollection = collection(db,"events");
+const competitionsCollection = collection(db,"competitions");
+
+let editId=null;
+let eventsMap={};
+
+// Hide club if External selected
+document.getElementById("category").addEventListener("change", function(){
+  const clubContainer = document.getElementById("clubContainer");
+
+  if(this.value === "External"){
+    clubContainer.style.display = "none";
+    document.getElementById("club").value="";
+  } else {
+    clubContainer.style.display = "block";
+  }
+});
+
+// Load Events
+async function loadEvents(){
+  const snapshot = await getDocs(eventsCollection);
+  const select = document.getElementById("eventSelect");
+
+  select.innerHTML = `<option value="">Select Event</option>`;
+
+  snapshot.forEach(docItem=>{
+    const e = docItem.data();
+    eventsMap[docItem.id] = e.theme;
+    select.innerHTML += `<option value="${docItem.id}">${e.theme}</option>`;
+  });
+
+  // Add Other option
+  select.innerHTML += `<option value="Other">Other</option>`;
+}
+
+// Add / Update
+window.handleSubmit = async function(){
+
+  const theme=document.getElementById("theme").value;
+  const category=document.getElementById("category").value;
+  const club=document.getElementById("club").value;
+  let eventId=document.getElementById("eventSelect").value;
+  const file=document.getElementById("rulesFile").files[0];
+
+  if(!theme||!category||!eventId){
+    alert("Fill all required fields");
+    return;
+  }
+
+  if(category !== "External" && !club){
+    alert("Select Club for Internal Competition");
+    return;
+  }
+
+  const rulesName = file ? file.name : "No File";
+
+  try{
+
+    if(editId){
+      await updateDoc(doc(db,"competitions",editId),
+      {theme,category,club,eventId,rulesName});
+      editId=null;
+      document.getElementById("submitBtn").innerText="Add Competition";
+    } else {
+      await addDoc(competitionsCollection,
+      {theme,category,club,eventId,rulesName});
+    }
+
+    alert("Competition Saved Successfully ✅");
+
+    document.querySelectorAll("input,select").forEach(el=>el.value="");
+    loadCompetitions();
+
+  } catch(error){
+    console.error(error);
+    alert("Error saving competition");
+  }
+};
+
+// Load Competitions
+async function loadCompetitions(){
+  const snapshot=await getDocs(competitionsCollection);
+  const table=document.getElementById("competitionTable");
+  table.innerHTML="";
+
+  snapshot.forEach(docItem=>{
+    const c=docItem.data();
+
+    table.innerHTML+=`
+      <tr>
+        <td>${c.theme}</td>
+        <td>${c.category}</td>
+        <td>${c.club || "-"}</td>
+        <td>${eventsMap[c.eventId] || c.eventId}</td>
+        <td>${c.rulesName || "No File"}</td>
+        <td>
+          <button onclick="editCompetition('${docItem.id}','${c.theme}','${c.category}','${c.club}','${c.eventId}')">Edit</button>
+          <button onclick="deleteCompetition('${docItem.id}')">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+window.deleteCompetition=async id=>{
+  await deleteDoc(doc(db,"competitions",id));
+  loadCompetitions();
+};
+
+window.editCompetition=(id,theme,category,club,eventId)=>{
+  document.getElementById("theme").value=theme;
+  document.getElementById("category").value=category;
+  document.getElementById("club").value=club;
+  document.getElementById("eventSelect").value=eventId;
+  editId=id;
+  document.getElementById("submitBtn").innerText="Update Competition";
+};
+
+await loadEvents();
+await loadCompetitions();
+
+</script>
+
+</body>
+</html>
