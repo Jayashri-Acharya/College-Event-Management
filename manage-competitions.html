@@ -14,15 +14,15 @@
     h1{margin-bottom:20px;}
     .form{background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);margin-bottom:30px;}
     input,select{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
-    button{padding:10px 15px;background:#5f2c82;color:white;border:none;border-radius:8px;cursor:pointer;}
+    button{padding:8px 12px;background:#5f2c82;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px;}
     table{width:100%;border-collapse:collapse;background:white;border-radius:12px;}
     th,td{padding:12px;border-bottom:1px solid #eee;}
     th{background:#f4f6f9;}
+    a.download{color:#5f2c82;font-weight:600;text-decoration:none;}
   </style>
 </head>
 
 <body>
-
 <div class="sidebar">
   <h2>Admin Panel</h2>
   <a href="admin-dashboard.html">Dashboard</a>
@@ -37,7 +37,7 @@
   <h1>Manage Competitions</h1>
 
   <div class="form">
-    <input type="text" id="theme" placeholder="Competition (Ex: Hackathon, Coding Challenge)">
+    <input type="text" id="theme" placeholder="Competition Theme (Ex: Hackathon, Coding Challenge)">
 
     <select id="category">
       <option value="">Select Internal / External</option>
@@ -45,27 +45,21 @@
       <option value="External">External</option>
     </select>
 
-    <!-- Club Dropdown -->
-    <div id="clubContainer">
-      <select id="club">
-        <option value="">Select Club</option>
-        <option value="Coding Club">Coding Club</option>
-        <option value="Cultural Club">Cultural Club</option>
-        <option value="Sports Club">Sports Club</option>
-        <option value="Management Club">Management Club</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-
-    <!-- Event Dropdown -->
-    <select id="eventSelect">
-      <option value="">Select Event</option>
+    <select id="club">
+      <option value="">Select Club</option>
+      <option value="Coding Club">Coding Club</option>
+      <option value="Cultural Club">Cultural Club</option>
+      <option value="Sports Club">Sports Club</option>
+      <option value="Management Club">Management Club</option>
     </select>
 
-    <!-- Upload Rules -->
+    <select id="eventSelect">
+      <option value="Other">Other</option>
+    </select>
+
     <input type="file" id="rulesFile" accept=".pdf,.doc,.docx">
 
-    <button id="submitBtn" onclick="handleSubmit()">Add Competition</button>
+    <button id="submitBtn">Add Competition</button>
   </div>
 
   <table>
@@ -75,7 +69,7 @@
         <th>Category</th>
         <th>Club</th>
         <th>Event</th>
-        <th>Rules File</th>
+        <th>Rules</th>
         <th>Action</th>
       </tr>
     </thead>
@@ -86,113 +80,102 @@
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+import { 
+  getStorage, ref, uploadBytes, getDownloadURL 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
   authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793"
+  projectId: "event-management-system-ea793",
+  storageBucket: "event-management-system-ea793.firebasestorage.app",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-const eventsCollection = collection(db,"events");
 const competitionsCollection = collection(db,"competitions");
 
-let editId=null;
-let eventsMap={};
+let editId = null;
 
-// Hide club if External selected
-document.getElementById("category").addEventListener("change", function(){
-  const clubContainer = document.getElementById("clubContainer");
 
-  if(this.value === "External"){
-    clubContainer.style.display = "none";
-    document.getElementById("club").value="";
-  } else {
-    clubContainer.style.display = "block";
-  }
-});
+// ADD / UPDATE
+document.getElementById("submitBtn").addEventListener("click", async () => {
 
-// Load Events
-async function loadEvents(){
-  const snapshot = await getDocs(eventsCollection);
-  const select = document.getElementById("eventSelect");
+  const theme = document.getElementById("theme").value;
+  const category = document.getElementById("category").value;
+  const club = document.getElementById("club").value;
+  const eventId = document.getElementById("eventSelect").value;
+  const file = document.getElementById("rulesFile").files[0];
 
-  select.innerHTML = `<option value="">Select Event</option>`;
-
-  snapshot.forEach(docItem=>{
-    const e = docItem.data();
-    eventsMap[docItem.id] = e.theme;
-    select.innerHTML += `<option value="${docItem.id}">${e.theme}</option>`;
-  });
-
-  // Add Other option
-  select.innerHTML += `<option value="Other">Other</option>`;
-}
-
-// Add / Update
-window.handleSubmit = async function(){
-
-  const theme=document.getElementById("theme").value;
-  const category=document.getElementById("category").value;
-  const club=document.getElementById("club").value;
-  let eventId=document.getElementById("eventSelect").value;
-  const file=document.getElementById("rulesFile").files[0];
-
-  if(!theme||!category||!eventId){
-    alert("Fill all required fields");
+  if(!theme || !category){
+    alert("Please fill required fields");
     return;
   }
 
-  if(category !== "External" && !club){
-    alert("Select Club for Internal Competition");
-    return;
-  }
+  let rulesURL = "";
+  let rulesName = "";
 
-  const rulesName = file ? file.name : "No File";
+  if(file){
+    const storageRef = ref(storage, "competitionRules/" + Date.now() + "_" + file.name);
+    await uploadBytes(storageRef, file);
+    rulesURL = await getDownloadURL(storageRef);
+    rulesName = file.name;
+  }
 
   try{
-
     if(editId){
-      await updateDoc(doc(db,"competitions",editId),
-      {theme,category,club,eventId,rulesName});
-      editId=null;
+      await updateDoc(doc(db,"competitions",editId),{
+        theme, category, club, eventId,
+        rulesURL, rulesName
+      });
+      editId = null;
       document.getElementById("submitBtn").innerText="Add Competition";
     } else {
-      await addDoc(competitionsCollection,
-      {theme,category,club,eventId,rulesName});
+      await addDoc(competitionsCollection,{
+        theme, category, club, eventId,
+        rulesURL, rulesName
+      });
     }
 
     alert("Competition Saved Successfully ✅");
-
     document.querySelectorAll("input,select").forEach(el=>el.value="");
     loadCompetitions();
 
-  } catch(error){
+  }catch(error){
     console.error(error);
     alert("Error saving competition");
   }
-};
 
-// Load Competitions
+});
+
+
+// LOAD TABLE
 async function loadCompetitions(){
-  const snapshot=await getDocs(competitionsCollection);
-  const table=document.getElementById("competitionTable");
+  const snapshot = await getDocs(competitionsCollection);
+  const table = document.getElementById("competitionTable");
   table.innerHTML="";
 
   snapshot.forEach(docItem=>{
-    const c=docItem.data();
+    const c = docItem.data();
 
     table.innerHTML+=`
       <tr>
         <td>${c.theme}</td>
         <td>${c.category}</td>
         <td>${c.club || "-"}</td>
-        <td>${eventsMap[c.eventId] || c.eventId}</td>
-        <td>${c.rulesName || "No File"}</td>
+        <td>${c.eventId || "-"}</td>
+        <td>
+          ${c.rulesURL 
+            ? `<a class="download" href="${c.rulesURL}" target="_blank">${c.rulesName}</a>` 
+            : "No File"}
+        </td>
         <td>
           <button onclick="editCompetition('${docItem.id}','${c.theme}','${c.category}','${c.club}','${c.eventId}')">Edit</button>
           <button onclick="deleteCompetition('${docItem.id}')">Delete</button>
@@ -202,12 +185,16 @@ async function loadCompetitions(){
   });
 }
 
-window.deleteCompetition=async id=>{
+
+// DELETE
+window.deleteCompetition = async (id)=>{
   await deleteDoc(doc(db,"competitions",id));
   loadCompetitions();
 };
 
-window.editCompetition=(id,theme,category,club,eventId)=>{
+
+// EDIT
+window.editCompetition = (id,theme,category,club,eventId)=>{
   document.getElementById("theme").value=theme;
   document.getElementById("category").value=category;
   document.getElementById("club").value=club;
@@ -216,8 +203,8 @@ window.editCompetition=(id,theme,category,club,eventId)=>{
   document.getElementById("submitBtn").innerText="Update Competition";
 };
 
-await loadEvents();
-await loadCompetitions();
+
+loadCompetitions();
 
 </script>
 
