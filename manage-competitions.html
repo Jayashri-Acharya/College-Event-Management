@@ -13,7 +13,8 @@
     .main{flex:1;padding:40px;overflow:auto;}
     h1{margin-bottom:20px;}
     .form{background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);margin-bottom:30px;}
-    input,select{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
+    input,select,textarea{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
+    textarea{min-height:90px;resize:vertical;}
     button{padding:8px 12px;background:#5f2c82;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px;}
     table{width:100%;border-collapse:collapse;background:white;border-radius:12px;}
     th,td{padding:12px;border-bottom:1px solid #eee;}
@@ -37,7 +38,7 @@
   <h1>Manage Competitions</h1>
 
   <div class="form">
-    <input type="text" id="theme" placeholder="Competition Theme (Ex: Hackathon, Coding Challenge)">
+    <input type="text" id="theme" placeholder="Competition Theme">
 
     <select id="category">
       <option value="">Select Internal / External</option>
@@ -45,19 +46,33 @@
       <option value="External">External</option>
     </select>
 
-    <select id="club">
-      <option value="">Select Club</option>
-      <option value="Coding Club">Coding Club</option>
-      <option value="Cultural Club">Cultural Club</option>
-      <option value="Sports Club">Sports Club</option>
-      <option value="Management Club">Management Club</option>
-    </select>
+    <div id="clubContainer">
+      <select id="club">
+        <option value="">Select Club</option>
+        <option value="Coding Club">Coding Club</option>
+        <option value="Cultural Club">Cultural Club</option>
+        <option value="Sports Club">Sports Club</option>
+        <option value="Management Club">Management Club</option>
+      </select>
+    </div>
 
     <select id="eventSelect">
+      <option value="">Select Event</option>
       <option value="Other">Other</option>
     </select>
 
-    <input type="file" id="rulesFile" accept=".pdf,.doc,.docx">
+    <input type="date" id="competitionDate">
+
+    <!-- ✅ NEW FACULTY COORDINATOR (REQUIRED) -->
+    <textarea id="facultyCoordinator" 
+      placeholder="Faculty Coordinator(s) - separate by comma or new line" required></textarea>
+
+    <!-- ✅ NEW STUDENT COORDINATOR (OPTIONAL) -->
+    <textarea id="studentCoordinator" 
+      placeholder="Student Coordinator(s) - separate by comma or new line (Optional)"></textarea>
+
+    <input type="text" id="venue" placeholder="Venue (Optional)">
+    <input type="text" id="rulesLink" placeholder="Paste Google Drive Rules Link Here">
 
     <button id="submitBtn">Add Competition</button>
   </div>
@@ -69,6 +84,10 @@
         <th>Category</th>
         <th>Club</th>
         <th>Event</th>
+        <th>Date</th>
+        <th>Faculty Coordinator(s)</th>
+        <th>Student Coordinator(s)</th>
+        <th>Venue</th>
         <th>Rules</th>
         <th>Action</th>
       </tr>
@@ -84,26 +103,37 @@ import {
   getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-import { 
-  getStorage, ref, uploadBytes, getDownloadURL 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 
 const firebaseConfig = {
   apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
   authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793",
-  storageBucket: "event-management-system-ea793.firebasestorage.app",
+  projectId: "event-management-system-ea793"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
-
 const competitionsCollection = collection(db,"competitions");
 
 let editId = null;
 
+// Hide club if external
+document.getElementById("category").addEventListener("change", function(){
+  const clubContainer = document.getElementById("clubContainer");
+  if(this.value === "External"){
+    clubContainer.style.display = "none";
+    document.getElementById("club").value="";
+  } else {
+    clubContainer.style.display = "block";
+  }
+});
+
+// Convert textarea to array
+function convertToArray(text){
+  return text.split(/\n|,/)
+             .map(name => name.trim())
+             .filter(name => name !== "");
+}
 
 // ADD / UPDATE
 document.getElementById("submitBtn").addEventListener("click", async () => {
@@ -112,49 +142,49 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   const category = document.getElementById("category").value;
   const club = document.getElementById("club").value;
   const eventId = document.getElementById("eventSelect").value;
-  const file = document.getElementById("rulesFile").files[0];
+  const competitionDate = document.getElementById("competitionDate").value;
+  const venue = document.getElementById("venue").value;
+  const rulesLink = document.getElementById("rulesLink").value;
 
-  if(!theme || !category){
-    alert("Please fill required fields");
+  const facultyCoordinator = convertToArray(
+    document.getElementById("facultyCoordinator").value
+  );
+
+  const studentCoordinator = convertToArray(
+    document.getElementById("studentCoordinator").value
+  );
+
+  if(!theme || !category || !competitionDate || facultyCoordinator.length === 0){
+    alert("Please fill required fields (Theme, Category, Date, Faculty Coordinator)");
     return;
-  }
-
-  let rulesURL = "";
-  let rulesName = "";
-
-  if(file){
-    const storageRef = ref(storage, "competitionRules/" + Date.now() + "_" + file.name);
-    await uploadBytes(storageRef, file);
-    rulesURL = await getDownloadURL(storageRef);
-    rulesName = file.name;
   }
 
   try{
     if(editId){
       await updateDoc(doc(db,"competitions",editId),{
         theme, category, club, eventId,
-        rulesURL, rulesName
+        competitionDate, venue, rulesLink,
+        facultyCoordinator, studentCoordinator
       });
       editId = null;
       document.getElementById("submitBtn").innerText="Add Competition";
     } else {
       await addDoc(competitionsCollection,{
         theme, category, club, eventId,
-        rulesURL, rulesName
+        competitionDate, venue, rulesLink,
+        facultyCoordinator, studentCoordinator
       });
     }
 
     alert("Competition Saved Successfully ✅");
-    document.querySelectorAll("input,select").forEach(el=>el.value="");
+    document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
     loadCompetitions();
 
   }catch(error){
     console.error(error);
     alert("Error saving competition");
   }
-
 });
-
 
 // LOAD TABLE
 async function loadCompetitions(){
@@ -171,13 +201,17 @@ async function loadCompetitions(){
         <td>${c.category}</td>
         <td>${c.club || "-"}</td>
         <td>${c.eventId || "-"}</td>
+        <td>${c.competitionDate || "-"}</td>
+        <td>${c.facultyCoordinator ? c.facultyCoordinator.join("<br>") : "-"}</td>
+        <td>${c.studentCoordinator ? c.studentCoordinator.join("<br>") : "-"}</td>
+        <td>${c.venue || "-"}</td>
         <td>
-          ${c.rulesURL 
-            ? `<a class="download" href="${c.rulesURL}" target="_blank">${c.rulesName}</a>` 
-            : "No File"}
+          ${c.rulesLink
+            ? `<a class="download" href="${c.rulesLink}" target="_blank">View Rules</a>`
+            : "No Rules"}
         </td>
         <td>
-          <button onclick="editCompetition('${docItem.id}','${c.theme}','${c.category}','${c.club}','${c.eventId}')">Edit</button>
+          <button onclick="editCompetition('${docItem.id}')">Edit</button>
           <button onclick="deleteCompetition('${docItem.id}')">Delete</button>
         </td>
       </tr>
@@ -185,24 +219,35 @@ async function loadCompetitions(){
   });
 }
 
-
 // DELETE
 window.deleteCompetition = async (id)=>{
   await deleteDoc(doc(db,"competitions",id));
   loadCompetitions();
 };
 
-
 // EDIT
-window.editCompetition = (id,theme,category,club,eventId)=>{
-  document.getElementById("theme").value=theme;
-  document.getElementById("category").value=category;
-  document.getElementById("club").value=club;
-  document.getElementById("eventSelect").value=eventId;
+window.editCompetition = async (id)=>{
+  const snapshot = await getDocs(competitionsCollection);
+  snapshot.forEach(docItem=>{
+    if(docItem.id === id){
+      const c = docItem.data();
+      document.getElementById("theme").value=c.theme;
+      document.getElementById("category").value=c.category;
+      document.getElementById("club").value=c.club;
+      document.getElementById("eventSelect").value=c.eventId;
+      document.getElementById("competitionDate").value=c.competitionDate;
+      document.getElementById("venue").value=c.venue;
+      document.getElementById("rulesLink").value=c.rulesLink || "";
+      document.getElementById("facultyCoordinator").value =
+        c.facultyCoordinator ? c.facultyCoordinator.join("\n") : "";
+      document.getElementById("studentCoordinator").value =
+        c.studentCoordinator ? c.studentCoordinator.join("\n") : "";
+    }
+  });
+
   editId=id;
   document.getElementById("submitBtn").innerText="Update Competition";
 };
-
 
 loadCompetitions();
 
