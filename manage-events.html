@@ -14,10 +14,12 @@
     h1{margin-bottom:20px;}
     .form{background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);margin-bottom:30px;}
     input,select{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
-    button{padding:10px 15px;background:#5f2c82;color:white;border:none;border-radius:8px;cursor:pointer;}
-    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;}
-    th,td{padding:12px;border-bottom:1px solid #eee;}
+    button{padding:8px 14px;background:#5f2c82;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px;}
+    button:hover{opacity:0.9;}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;}
+    th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;}
     th{background:#f4f6f9;}
+    a.download{color:#5f2c82;font-weight:600;text-decoration:none;}
   </style>
 </head>
 <body>
@@ -27,7 +29,7 @@
   <a href="admin-dashboard.html">Dashboard</a>
   <a href="manage-events.html">Manage Events</a>
   <a href="manage-competitions.html">Manage Competitions</a>
-  <a href="#">Manage HomeScreen</a>
+  <a href="manage-homescreen.html">Manage Highlights</a>
   <a href="#">View Registrations</a>
   <a href="login.html">Logout</a>
 </div>
@@ -36,7 +38,8 @@
   <h1>Manage Events</h1>
 
   <div class="form">
-    <input type="text" id="theme" placeholder="Event Theme (Ex: Cybersecurity, Workshop)">
+
+    <input type="text" id="theme" placeholder="Event Theme">
 
     <select id="category">
       <option value="">Select Internal / External</option>
@@ -44,7 +47,6 @@
       <option value="External">External</option>
     </select>
 
-    <!-- Club Dropdown -->
     <div id="clubContainer">
       <select id="club">
         <option value="">Select Club</option>
@@ -52,24 +54,49 @@
         <option value="Cultural Club">Cultural Club</option>
         <option value="Sports Club">Sports Club</option>
         <option value="Management Club">Management Club</option>
-        <option value="Other">Other</option>
       </select>
     </div>
 
     <input type="date" id="date">
-    <input type="text" id="venue" placeholder="Venue">
+    <input type="text" id="time" placeholder="Select Time" onfocus="(this.type='time')">
 
-    <button id="submitBtn" onclick="handleSubmit()">Add Event</button>
+    <input type="text" id="venue" placeholder="Venue">
+    <input type="text" id="resourcePerson" placeholder="Resource Person Name (Optional)">
+
+    <!-- Target Audience -->
+    <select id="audience">
+      <option value="">Select Target Audience</option>
+      <option value="1st BCA">1st BCA</option>
+      <option value="2nd BCA">2nd BCA</option>
+      <option value="3rd BCA">3rd BCA</option>
+      <option value="BCA">BCA</option>
+      <option value="1st BCOM">1st BCOM</option>
+      <option value="2nd BCOM">2nd BCOM</option>
+      <option value="3rd BCOM">3rd BCOM</option>
+      <option value="BCOM">BCOM</option>
+      <option value="All Students">All Students</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <input type="text" id="otherAudience" placeholder="Enter Custom Audience" style="display:none;">
+
+    <input type="text" id="brochureLink" placeholder="Paste Google Drive Brochure Link Here">
+
+    <button id="submitBtn">Add Event</button>
   </div>
 
   <table>
     <thead>
       <tr>
         <th>Theme</th>
+        <th>Resource Person</th>
         <th>Category</th>
         <th>Club</th>
         <th>Date</th>
+        <th>Time</th>
         <th>Venue</th>
+        <th>Audience</th>
+        <th>Brochure</th>
         <th>Action</th>
       </tr>
     </thead>
@@ -78,14 +105,15 @@
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793",
+      apiKey: "AIzaSyBjMaDtyUVCi2zkjF3jn8Gv8wSg3nvLtxo",
+      authDomain: "event-management-system-bdd21.firebaseapp.com",
+      projectId: "event-management-system-bdd21",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -94,76 +122,109 @@ const eventsCollection = collection(db,"events");
 
 let editId = null;
 
-// 🔥 Hide club if External selected
+/* Hide club if External */
 document.getElementById("category").addEventListener("change", function(){
-  const clubContainer = document.getElementById("clubContainer");
+  document.getElementById("clubContainer").style.display =
+  this.value === "External" ? "none" : "block";
+});
 
-  if(this.value === "External"){
-    clubContainer.style.display = "none";
-    document.getElementById("club").value="";
+/* Show textbox if Other audience selected */
+document.getElementById("audience").addEventListener("change", function(){
+  const otherInput = document.getElementById("otherAudience");
+  if(this.value === "Other"){
+    otherInput.style.display = "block";
   } else {
-    clubContainer.style.display = "block";
+    otherInput.style.display = "none";
+    otherInput.value = "";
   }
 });
 
-window.handleSubmit = async function(){
+/* Add / Update Event */
+document.getElementById("submitBtn").addEventListener("click", async () => {
 
-  const theme=document.getElementById("theme").value;
-  const category=document.getElementById("category").value;
-  const club=document.getElementById("club").value;
-  const date=document.getElementById("date").value;
-  const venue=document.getElementById("venue").value;
+  const theme = document.getElementById("theme").value;
+  const category = document.getElementById("category").value;
+  const club = document.getElementById("club").value;
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+  const venue = document.getElementById("venue").value;
+  const resourcePerson = document.getElementById("resourcePerson").value;
 
-  if(!theme||!category||!date||!venue){
-    alert("Please fill all required fields");
+  let audience = document.getElementById("audience").value;
+  const otherAudience = document.getElementById("otherAudience").value;
+  if(audience === "Other"){
+    audience = otherAudience;
+  }
+
+  const brochureLink = document.getElementById("brochureLink").value;
+
+  if(!theme || !category || !date || !time || !venue){
+    alert("Please fill required fields");
     return;
   }
 
-  if(category === "Internal" && !club){
-    alert("Select Club for Internal Event");
-    return;
-  }
-
-  try {
+  try{
 
     if(editId){
       await updateDoc(doc(db,"events",editId),
-      {theme,category,club,date,venue});
-      editId=null;
-      document.getElementById("submitBtn").innerText="Add Event";
+      {theme,category,club,date,time,venue,resourcePerson,audience,brochureLink});
+      editId = null;
+      document.getElementById("submitBtn").innerText = "Add Event";
     } else {
       await addDoc(eventsCollection,
-      {theme,category,club,date,venue});
+      {theme,category,club,date,time,venue,resourcePerson,audience,brochureLink});
     }
 
     alert("Event Saved Successfully ✅");
-
     document.querySelectorAll("input,select").forEach(el=>el.value="");
+    document.getElementById("otherAudience").style.display="none";
     loadEvents();
 
   } catch(error){
     console.error(error);
-    alert("Error saving event. Check console.");
+    alert("Error saving event");
   }
-};
 
+});
+
+/* Load Events */
 async function loadEvents(){
-  const snapshot=await getDocs(eventsCollection);
-  const table=document.getElementById("eventTable");
+  const snapshot = await getDocs(eventsCollection);
+  const table = document.getElementById("eventTable");
   table.innerHTML="";
 
   snapshot.forEach(docItem=>{
-    const e=docItem.data();
+    const e = docItem.data();
 
     table.innerHTML+=`
       <tr>
         <td>${e.theme}</td>
+        <td>${e.resourcePerson || "-"}</td>
         <td>${e.category}</td>
         <td>${e.club || "-"}</td>
         <td>${e.date}</td>
+        <td>${e.time}</td>
         <td>${e.venue}</td>
+        <td>${e.audience || "-"}</td>
         <td>
-          <button onclick="editEvent('${docItem.id}','${e.theme}','${e.category}','${e.club}','${e.date}','${e.venue}')">Edit</button>
+          ${e.brochureLink
+          ? `<a class="download" href="${e.brochureLink}" target="_blank">View</a>`
+          : "No File"}
+        </td>
+        <td>
+          <button onclick="editEvent(
+            '${docItem.id}',
+            '${e.theme}',
+            '${e.category}',
+            '${e.club}',
+            '${e.date}',
+            '${e.time}',
+            '${e.venue}',
+            '${e.resourcePerson}',
+            '${e.audience}',
+            '${e.brochureLink}'
+          )">Edit</button>
+
           <button onclick="deleteEvent('${docItem.id}')">Delete</button>
         </td>
       </tr>
@@ -171,23 +232,44 @@ async function loadEvents(){
   });
 }
 
+/* Edit */
+window.editEvent = function(
+  id, theme, category, club,
+  date, time, venue,
+  resourcePerson, audience, brochureLink
+){
+  document.getElementById("theme").value = theme;
+  document.getElementById("category").value = category;
+  document.getElementById("club").value = club;
+  document.getElementById("date").value = date;
+  document.getElementById("time").value = time;
+  document.getElementById("venue").value = venue;
+  document.getElementById("resourcePerson").value = resourcePerson;
+  document.getElementById("brochureLink").value = brochureLink || "";
+
+  if(document.querySelector(`#audience option[value="${audience}"]`)){
+    document.getElementById("audience").value = audience;
+    document.getElementById("otherAudience").style.display="none";
+  } else {
+    document.getElementById("audience").value="Other";
+    document.getElementById("otherAudience").style.display="block";
+    document.getElementById("otherAudience").value=audience;
+  }
+
+  editId = id;
+  document.getElementById("submitBtn").innerText = "Update Event";
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* Delete */
 window.deleteEvent = async function(id){
   await deleteDoc(doc(db,"events",id));
   loadEvents();
 };
 
-window.editEvent = function(id,theme,category,club,date,venue){
-  document.getElementById("theme").value=theme;
-  document.getElementById("category").value=category;
-  document.getElementById("club").value=club;
-  document.getElementById("date").value=date;
-  document.getElementById("venue").value=venue;
-  editId=id;
-  document.getElementById("submitBtn").innerText="Update Event";
-};
-
 loadEvents();
 
 </script>
+
 </body>
 </html>
