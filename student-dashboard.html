@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:'Inter',sans-serif;
+    }
+
+    body{
+      background:#f4f6f9;
+    }
+
+    .navbar{
+      width:100%;
+      background:linear-gradient(135deg,#5f2c82,#49a09d);
+      padding:15px 40px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:white;
+    }
+
+    .logo{
+      font-size:18px;
+      font-weight:600;
+    }
+
+    .nav-links a{
+      text-decoration:none;
+      color:white;
+      margin-left:25px;
+      font-size:14px;
+      font-weight:500;
+      transition:0.3s;
+    }
+
+    .nav-links a:hover{
+      opacity:0.8;
+    }
+
+    .hero{
+      padding:60px 80px;
+      text-align:center;
+    }
+
+    .hero h1{
+      font-size:32px;
+      margin-bottom:30px;
+      color:#333;
+    }
+
+    /* SLIDER */
+
+    .slider{
+      width:100%;
+      max-width:900px;
+      height:300px;
+      margin:auto;
+      overflow:hidden;
+      border-radius:15px;
+      position:relative;
+      box-shadow:0 8px 20px rgba(0,0,0,0.1);
+    }
+
+    .slides{
+      position:relative;
+      width:100%;
+      height:100%;
+    }
+
+    .slide{
+      position:absolute;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      opacity:0;
+      transition:opacity 0.8s ease-in-out, transform 0.5s;
+    }
+
+    .slide.active{
+      opacity:1;
+    }
+
+    .slide:hover{
+      transform:scale(1.05);
+    }
+
+    /* UPCOMING */
+
+    .upcoming{
+      padding:40px 80px;
+    }
+
+    .upcoming h2{
+      margin-bottom:25px;
+      font-size:24px;
+      color:#333;
+    }
+
+    .event-container{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+      gap:20px;
+    }
+
+    .event-card{
+      background:white;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 5px 15px rgba(0,0,0,0.05);
+      transition:0.3s;
+    }
+
+    .event-card:hover{
+      transform:translateY(-5px);
+    }
+
+    .event-card h3{
+      font-size:16px;
+      margin-bottom:10px;
+      color:#5f2c82;
+    }
+
+    .tag{
+      font-size:11px;
+      font-weight:600;
+      background:#eee;
+      padding:4px 8px;
+      border-radius:20px;
+      display:inline-block;
+      margin-bottom:8px;
+    }
+
+    .event-card p{
+      font-size:13px;
+      color:#666;
+      margin-bottom:6px;
+    }
+
+    .deadline{
+      font-size:12px;
+      font-weight:600;
+      color:#e63946;
+      margin-top:6px;
+    }
+
+    .footer{
+      margin-top:60px;
+      padding:20px;
+      text-align:center;
+      background:#5f2c82;
+      color:white;
+      font-size:13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="navbar">
+    <div class="logo">🎓 College Logo</div>
+    <div class="nav-links">
+      <a href="#">Home</a>
+      <a href="#">Events</a>
+      <a href="#">Status</a>
+      <a href="#">Contact Us</a>
+      <a href="login.html">Logout</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1>Welcome to Event Management System</h1>
+
+    <div class="slider">
+      <div class="slides" id="slidesContainer">
+        <!-- Highlights will load here -->
+      </div>
+    </div>
+
+  </div>
+
+  <div class="upcoming">
+    <h2>Upcoming Events & Competitions</h2>
+    <div class="event-container" id="eventContainer"></div>
+  </div>
+
+  <div class="footer">
+    © 2026 College Event Management System
+  </div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBjMaDtyUVCi2zkjF3jn8Gv8wSg3nvLtxo",
+  authDomain: "event-management-system-bdd21.firebaseapp.com",
+  projectId: "event-management-system-bdd21",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const container = document.getElementById("eventContainer");
+const slidesContainer = document.getElementById("slidesContainer");
+
+/* =========================
+   HIGHLIGHTS SLIDER
+========================= */
+
+async function loadHighlights(){
+
+  const snapshot = await getDocs(collection(db,"highlights"));
+
+  snapshot.forEach((doc, index)=>{
+    const data = doc.data();
+
+    const img = document.createElement("img");
+    img.src = data.imageUrl;
+    img.className = "slide";
+
+    if(index === 0){
+      img.classList.add("active");
+    }
+
+    slidesContainer.appendChild(img);
+  });
+
+  startSlider();
+}
+
+let currentSlide = 0;
+let slideInterval;
+
+function showSlide(index){
+  const slides = document.querySelectorAll(".slide");
+  slides.forEach(slide => slide.classList.remove("active"));
+  slides[index].classList.add("active");
+}
+
+function nextSlide(){
+  const slides = document.querySelectorAll(".slide");
+  if(slides.length === 0) return;
+
+  currentSlide = (currentSlide + 1) % slides.length;
+  showSlide(currentSlide);
+}
+
+function startSlider(){
+  slideInterval = setInterval(nextSlide, 3000);
+
+  const slider = document.querySelector(".slider");
+  slider.addEventListener("mouseenter", ()=> clearInterval(slideInterval));
+  slider.addEventListener("mouseleave", startSlider);
+}
+
+/* =========================
+   EVENTS & COMPETITIONS
+========================= */
+
+function calculateDeadline(dateValue){
+  const today = new Date();
+  const eventDate = new Date(dateValue);
+
+  const diffTime = eventDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if(diffDays === 0) return "Today";
+  if(diffDays === 1) return "Tomorrow";
+  if(diffDays > 1) return diffDays + " Days Left";
+  return "Completed";
+}
+
+function createCard(title, date, venue, audience, type){
+  const card = document.createElement("div");
+  card.className = "event-card";
+
+  let audienceHTML = "";
+
+  if(type === "Event"){
+    audienceHTML = `<p><strong>Audience:</strong> ${audience || "All Students"}</p>`;
+  }
+
+  card.innerHTML = `
+    <div class="tag">${type}</div>
+    <h3>${title}</h3>
+    <p><strong>Date:</strong> ${date}</p>
+    <p><strong>Venue:</strong> ${venue || "-"}</p>
+    ${audienceHTML}
+    <div class="deadline">${calculateDeadline(date)}</div>
+  `;
+
+  container.appendChild(card);
+}
+
+async function loadData(){
+
+  const eventsSnapshot = await getDocs(collection(db,"events"));
+  eventsSnapshot.forEach(doc=>{
+    const e = doc.data();
+    createCard(e.theme, e.date, e.venue, e.audience, "Event");
+  });
+
+  const compSnapshot = await getDocs(collection(db,"competitions"));
+  compSnapshot.forEach(doc=>{
+    const c = doc.data();
+    createCard(c.theme, c.competitionDate, c.venue, null, "Competition");
+  });
+}
+
+/* ========================= */
+
+loadHighlights();
+loadData();
+
+</script>
+
+</body>
+</html>
