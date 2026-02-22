@@ -14,22 +14,24 @@
     h1{margin-bottom:20px;}
     .form{background:white;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.05);margin-bottom:30px;}
     input,select,textarea{width:100%;padding:10px;margin-bottom:15px;border-radius:8px;border:1px solid #ddd;}
-    textarea{min-height:90px;resize:vertical;}
-    button{padding:8px 12px;background:#5f2c82;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px;}
-    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;}
-    th,td{padding:12px;border-bottom:1px solid #eee;}
+    textarea{resize:vertical;min-height:60px;}
+    button{padding:8px 14px;background:#5f2c82;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px;}
+    button:hover{opacity:0.9;}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;}
+    th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;}
     th{background:#f4f6f9;}
     a.download{color:#5f2c82;font-weight:600;text-decoration:none;}
   </style>
 </head>
 
 <body>
+
 <div class="sidebar">
   <h2>Admin Panel</h2>
   <a href="admin-dashboard.html">Dashboard</a>
   <a href="manage-events.html">Manage Events</a>
   <a href="manage-competitions.html">Manage Competitions</a>
-  <a href="#">Manage HomeScreen</a>
+  <a href="manage-homescreen.html">Manage Highlights</a>
   <a href="#">View Registrations</a>
   <a href="login.html">Logout</a>
 </div>
@@ -38,6 +40,7 @@
   <h1>Manage Competitions</h1>
 
   <div class="form">
+
     <input type="text" id="theme" placeholder="Competition Theme">
 
     <select id="category">
@@ -61,17 +64,15 @@
       <option value="Other">Other</option>
     </select>
 
+    <!-- Other Event Textbox -->
+    <input type="text" id="otherEventInput" placeholder="Enter Other Event Name" style="display:none;">
+
     <input type="date" id="competitionDate">
-
-    <!-- ✅ NEW FACULTY COORDINATOR (REQUIRED) -->
-    <textarea id="facultyCoordinator" 
-      placeholder="Faculty Coordinator(s) - separate by comma or new line" required></textarea>
-
-    <!-- ✅ NEW STUDENT COORDINATOR (OPTIONAL) -->
-    <textarea id="studentCoordinator" 
-      placeholder="Student Coordinator(s) - separate by comma or new line (Optional)"></textarea>
-
     <input type="text" id="venue" placeholder="Venue (Optional)">
+
+    <textarea id="facultyCoordinator" placeholder="Faculty Coordinator Names"></textarea>
+    <textarea id="studentCoordinator" placeholder="Student Coordinator Names (Optional)"></textarea>
+
     <input type="text" id="rulesLink" placeholder="Paste Google Drive Rules Link Here">
 
     <button id="submitBtn">Add Competition</button>
@@ -85,30 +86,28 @@
         <th>Club</th>
         <th>Event</th>
         <th>Date</th>
-        <th>Faculty Coordinator(s)</th>
-        <th>Student Coordinator(s)</th>
         <th>Venue</th>
+        <th>Faculty Coordinator</th>
+        <th>Student Coordinator</th>
         <th>Rules</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody id="competitionTable"></tbody>
   </table>
+
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
-  authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793"
+      apiKey: "AIzaSyBjMaDtyUVCi2zkjF3jn8Gv8wSg3nvLtxo",
+      authDomain: "event-management-system-bdd21.firebaseapp.com",
+      projectId: "event-management-system-bdd21",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -117,7 +116,7 @@ const competitionsCollection = collection(db,"competitions");
 
 let editId = null;
 
-// Hide club if external
+/* Hide club if External */
 document.getElementById("category").addEventListener("change", function(){
   const clubContainer = document.getElementById("clubContainer");
   if(this.value === "External"){
@@ -128,34 +127,38 @@ document.getElementById("category").addEventListener("change", function(){
   }
 });
 
-// Convert textarea to array
-function convertToArray(text){
-  return text.split(/\n|,/)
-             .map(name => name.trim())
-             .filter(name => name !== "");
-}
+/* Show textbox if Other selected */
+document.getElementById("eventSelect").addEventListener("change", function(){
+  const otherInput = document.getElementById("otherEventInput");
+  if(this.value === "Other"){
+    otherInput.style.display = "block";
+  } else {
+    otherInput.style.display = "none";
+    otherInput.value="";
+  }
+});
 
-// ADD / UPDATE
+/* Add / Update Competition */
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
   const theme = document.getElementById("theme").value;
   const category = document.getElementById("category").value;
   const club = document.getElementById("club").value;
-  const eventId = document.getElementById("eventSelect").value;
+
+  let eventId = document.getElementById("eventSelect").value;
+  const otherEvent = document.getElementById("otherEventInput").value;
+  if(eventId === "Other"){
+    eventId = otherEvent;
+  }
+
   const competitionDate = document.getElementById("competitionDate").value;
   const venue = document.getElementById("venue").value;
+  const facultyCoordinator = document.getElementById("facultyCoordinator").value;
+  const studentCoordinator = document.getElementById("studentCoordinator").value;
   const rulesLink = document.getElementById("rulesLink").value;
 
-  const facultyCoordinator = convertToArray(
-    document.getElementById("facultyCoordinator").value
-  );
-
-  const studentCoordinator = convertToArray(
-    document.getElementById("studentCoordinator").value
-  );
-
-  if(!theme || !category || !competitionDate || facultyCoordinator.length === 0){
-    alert("Please fill required fields (Theme, Category, Date, Faculty Coordinator)");
+  if(!theme || !category || !competitionDate){
+    alert("Please fill required fields");
     return;
   }
 
@@ -163,30 +166,34 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     if(editId){
       await updateDoc(doc(db,"competitions",editId),{
         theme, category, club, eventId,
-        competitionDate, venue, rulesLink,
-        facultyCoordinator, studentCoordinator
+        competitionDate, venue,
+        facultyCoordinator, studentCoordinator,
+        rulesLink
       });
       editId = null;
-      document.getElementById("submitBtn").innerText="Add Competition";
+      document.getElementById("submitBtn").innerText = "Add Competition";
     } else {
       await addDoc(competitionsCollection,{
         theme, category, club, eventId,
-        competitionDate, venue, rulesLink,
-        facultyCoordinator, studentCoordinator
+        competitionDate, venue,
+        facultyCoordinator, studentCoordinator,
+        rulesLink
       });
     }
 
     alert("Competition Saved Successfully ✅");
     document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
+    document.getElementById("otherEventInput").style.display="none";
     loadCompetitions();
 
-  }catch(error){
+  } catch(error){
     console.error(error);
     alert("Error saving competition");
   }
+
 });
 
-// LOAD TABLE
+/* Load Competitions */
 async function loadCompetitions(){
   const snapshot = await getDocs(competitionsCollection);
   const table = document.getElementById("competitionTable");
@@ -195,23 +202,35 @@ async function loadCompetitions(){
   snapshot.forEach(docItem=>{
     const c = docItem.data();
 
-    table.innerHTML+=`
+    table.innerHTML += `
       <tr>
         <td>${c.theme}</td>
-        <td>${c.category}</td>
+        <td>${c.category || "-"}</td>
         <td>${c.club || "-"}</td>
         <td>${c.eventId || "-"}</td>
         <td>${c.competitionDate || "-"}</td>
-        <td>${c.facultyCoordinator ? c.facultyCoordinator.join("<br>") : "-"}</td>
-        <td>${c.studentCoordinator ? c.studentCoordinator.join("<br>") : "-"}</td>
         <td>${c.venue || "-"}</td>
+        <td>${c.facultyCoordinator || "-"}</td>
+        <td>${c.studentCoordinator || "-"}</td>
         <td>
           ${c.rulesLink
-            ? `<a class="download" href="${c.rulesLink}" target="_blank">View Rules</a>`
+            ? `<a class="download" href="${c.rulesLink}" target="_blank">View</a>`
             : "No Rules"}
         </td>
         <td>
-          <button onclick="editCompetition('${docItem.id}')">Edit</button>
+          <button onclick="editCompetition(
+            '${docItem.id}',
+            '${c.theme}',
+            '${c.category}',
+            '${c.club}',
+            '${c.eventId}',
+            '${c.competitionDate}',
+            '${c.venue}',
+            '${c.facultyCoordinator}',
+            '${c.studentCoordinator}',
+            '${c.rulesLink}'
+          )">Edit</button>
+
           <button onclick="deleteCompetition('${docItem.id}')">Delete</button>
         </td>
       </tr>
@@ -219,34 +238,40 @@ async function loadCompetitions(){
   });
 }
 
-// DELETE
+/* Edit */
+window.editCompetition = function(
+  id, theme, category, club,
+  eventId, competitionDate, venue,
+  facultyCoordinator, studentCoordinator, rulesLink
+){
+
+  document.getElementById("theme").value = theme;
+  document.getElementById("category").value = category;
+  document.getElementById("club").value = club;
+  document.getElementById("competitionDate").value = competitionDate;
+  document.getElementById("venue").value = venue;
+  document.getElementById("facultyCoordinator").value = facultyCoordinator;
+  document.getElementById("studentCoordinator").value = studentCoordinator;
+  document.getElementById("rulesLink").value = rulesLink;
+
+  if(document.querySelector(`#eventSelect option[value="${eventId}"]`)){
+    document.getElementById("eventSelect").value = eventId;
+    document.getElementById("otherEventInput").style.display="none";
+  } else {
+    document.getElementById("eventSelect").value="Other";
+    document.getElementById("otherEventInput").style.display="block";
+    document.getElementById("otherEventInput").value=eventId;
+  }
+
+  editId = id;
+  document.getElementById("submitBtn").innerText = "Update Competition";
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+
+/* Delete */
 window.deleteCompetition = async (id)=>{
   await deleteDoc(doc(db,"competitions",id));
   loadCompetitions();
-};
-
-// EDIT
-window.editCompetition = async (id)=>{
-  const snapshot = await getDocs(competitionsCollection);
-  snapshot.forEach(docItem=>{
-    if(docItem.id === id){
-      const c = docItem.data();
-      document.getElementById("theme").value=c.theme;
-      document.getElementById("category").value=c.category;
-      document.getElementById("club").value=c.club;
-      document.getElementById("eventSelect").value=c.eventId;
-      document.getElementById("competitionDate").value=c.competitionDate;
-      document.getElementById("venue").value=c.venue;
-      document.getElementById("rulesLink").value=c.rulesLink || "";
-      document.getElementById("facultyCoordinator").value =
-        c.facultyCoordinator ? c.facultyCoordinator.join("\n") : "";
-      document.getElementById("studentCoordinator").value =
-        c.studentCoordinator ? c.studentCoordinator.join("\n") : "";
-    }
-  });
-
-  editId=id;
-  document.getElementById("submitBtn").innerText="Update Competition";
 };
 
 loadCompetitions();
