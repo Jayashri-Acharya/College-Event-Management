@@ -152,7 +152,7 @@
       <li><a href="#">Dashboard</a></li>
       <li><a href="manage-events.html">Manage Events</a></li>
       <li><a href="manage-competitions.html">Manage Competitions</a></li>
-      <a href="#">Manage HomeScreen</a>
+      <a href="manage-homescreen.html">Manage Highlights</a>
       <li><a href="#">View Registrations</a></li>
       <li><a href="login.html">Logout</a></li>
     </ul>
@@ -210,11 +210,10 @@
 
     // 🔥 PASTE YOUR REAL FIREBASE CONFIG HERE
     const firebaseConfig = {
-      apiKey:  "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
-      authDomain: "event-management-system-ea793.firebaseapp.com",
-      projectId: "event-management-system-ea793",
+      apiKey: "AIzaSyBjMaDtyUVCi2zkjF3jn8Gv8wSg3nvLtxo",
+      authDomain: "event-management-system-bdd21.firebaseapp.com",
+      projectId: "event-management-system-bdd21",
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
@@ -243,7 +242,7 @@
 
           eventsBody.innerHTML += `
             <tr>
-              <td>${event.name}</td>
+              <td>${event.theme}</td>
               <td>${event.date}</td>
               <td>${event.venue}</td>
             </tr>
@@ -258,4 +257,3 @@
 
 </body>
 </html>
-
