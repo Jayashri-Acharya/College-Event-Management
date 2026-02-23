@@ -55,43 +55,33 @@
       color:#333;
     }
 
-    /* SLIDER */
+    /* STATIC SLIDER */
 
     .slider{
       width:100%;
       max-width:900px;
       height:300px;
-      margin:auto;
-      overflow:hidden;
+      margin:30px auto 0 auto;
       border-radius:15px;
+      overflow:hidden;
       position:relative;
       box-shadow:0 8px 20px rgba(0,0,0,0.1);
     }
 
-    .slides{
-      position:relative;
-      width:100%;
-      height:100%;
-    }
-
     .slide{
-      position:absolute;
       width:100%;
       height:100%;
       object-fit:cover;
+      position:absolute;
+      top:0;
+      left:0;
       opacity:0;
-      transition:opacity 0.8s ease-in-out, transform 0.5s;
+      transition:opacity 0.8s ease-in-out;
     }
 
     .slide.active{
       opacity:1;
     }
-
-    .slide:hover{
-      transform:scale(1.05);
-    }
-
-    /* UPCOMING */
 
     .upcoming{
       padding:40px 80px;
@@ -177,12 +167,12 @@
   <div class="hero">
     <h1>Welcome to Event Management System</h1>
 
+    <!-- STATIC SLIDESHOW -->
     <div class="slider">
-      <div class="slides" id="slidesContainer">
-        <!-- Highlights will load here -->
-      </div>
+      <img src="C:\Users\sinchana\Documents\Gururaj\download.jpg" class="slide active">
+      <img src="C:\Users\sinchana\Documents\Gururaj\images.jpg" class="slide">
+      <img src="images/h3.jpg" class="slide">
     </div>
-
   </div>
 
   <div class="upcoming">
@@ -200,70 +190,34 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBjMaDtyUVCi2zkjF3jn8Gv8wSg3nvLtxo",
-  authDomain: "event-management-system-bdd21.firebaseapp.com",
-  projectId: "event-management-system-bdd21",
+  apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
+  authDomain: "event-management-system-ea793.firebaseapp.com",
+  projectId: "event-management-system-ea793",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const container = document.getElementById("eventContainer");
-const slidesContainer = document.getElementById("slidesContainer");
 
-/* =========================
-   HIGHLIGHTS SLIDER
-========================= */
-
-async function loadHighlights(){
-
-  const snapshot = await getDocs(collection(db,"highlights"));
-
-  snapshot.forEach((doc, index)=>{
-    const data = doc.data();
-
-    const img = document.createElement("img");
-    img.src = data.imageUrl;
-    img.className = "slide";
-
-    if(index === 0){
-      img.classList.add("active");
-    }
-
-    slidesContainer.appendChild(img);
-  });
-
-  startSlider();
-}
+/* SLIDER LOGIC */
 
 let currentSlide = 0;
-let slideInterval;
+const slides = document.querySelectorAll(".slide");
 
 function showSlide(index){
-  const slides = document.querySelectorAll(".slide");
   slides.forEach(slide => slide.classList.remove("active"));
   slides[index].classList.add("active");
 }
 
 function nextSlide(){
-  const slides = document.querySelectorAll(".slide");
-  if(slides.length === 0) return;
-
   currentSlide = (currentSlide + 1) % slides.length;
   showSlide(currentSlide);
 }
 
-function startSlider(){
-  slideInterval = setInterval(nextSlide, 3000);
+setInterval(nextSlide, 3000);
 
-  const slider = document.querySelector(".slider");
-  slider.addEventListener("mouseenter", ()=> clearInterval(slideInterval));
-  slider.addEventListener("mouseleave", startSlider);
-}
-
-/* =========================
-   EVENTS & COMPETITIONS
-========================= */
+/* EVENTS & COMPETITIONS */
 
 function calculateDeadline(dateValue){
   const today = new Date();
@@ -315,9 +269,6 @@ async function loadData(){
   });
 }
 
-/* ========================= */
-
-loadHighlights();
 loadData();
 
 </script>
