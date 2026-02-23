@@ -1,188 +1,143 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Event Management System</title>
-
+  <title>Admin Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:'Inter', sans-serif;
     }
 
-    body {
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #5f2c82, #49a09d);
-      overflow: hidden;
+    body{
+      display:flex;
+      height:100vh;
+      background:#f4f6f9;
     }
 
-    /* Floating Shapes */
-    .circle {
-      position: absolute;
-      border-radius: 50%;
-      opacity: 0.2;
-      animation: float 6s infinite ease-in-out alternate;
+    .sidebar{
+      width:240px;
+      background:linear-gradient(180deg,#5f2c82,#49a09d);
+      color:white;
+      padding:30px 20px;
+      display:flex;
+      flex-direction:column;
     }
 
-    .circle1 {
-      width: 250px;
-      height: 250px;
-      background: #ffffff;
-      top: -50px;
-      left: -50px;
+    .sidebar h2{
+      margin-bottom:40px;
+      font-size:20px;
+      font-weight:600;
     }
 
-    .circle2 {
-      width: 200px;
-      height: 200px;
-      background: #ffffff;
-      bottom: -40px;
-      right: -40px;
-      animation-delay: 2s;
+    .menu{
+      list-style:none;
     }
 
-    @keyframes float {
-      from { transform: translateY(0px); }
-      to { transform: translateY(30px); }
+    .menu li{
+      margin-bottom:15px;
     }
 
-    /* Glass Card */
-    .container {
-      width: 900px;
-      height: 520px;
-      display: flex;
-      border-radius: 20px;
-      overflow: hidden;
-      backdrop-filter: blur(20px);
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
-      animation: fadeIn 1s ease forwards;
+    .menu a{
+      text-decoration:none;
+      color:white;
+      padding:10px 15px;
+      display:block;
+      border-radius:8px;
+      transition:0.3s;
+      font-size:14px;
     }
 
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .menu a:hover{
+      background:rgba(255,255,255,0.2);
+      transform:translateX(5px);
     }
 
-    /* Left Section */
-    .left {
-      width: 50%;
-      background: url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=60') no-repeat center center/cover;
-      padding: 60px;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      position: relative;
+    .main{
+      flex:1;
+      padding:40px;
+      overflow-y:auto;
     }
 
-    .left::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
+    .topbar{
+      margin-bottom:30px;
     }
 
-    .left-content {
-      position: relative;
-      z-index: 2;
+    .topbar h1{
+      font-size:24px;
+      font-weight:600;
+      color:#333;
     }
 
-    .left h1 {
-      font-size: 34px;
-      margin-bottom: 20px;
-      font-weight: 700;
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:20px;
+      margin-bottom:30px;
     }
 
-    .left p {
-      font-size: 15px;
-      line-height: 1.7;
-      opacity: 0.9;
+    .card{
+      background:white;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.05);
+      transition:0.3s;
     }
 
-    /* Right Section */
-    .right {
-      width: 50%;
-      padding: 70px 60px;
-      background: rgba(255,255,255,0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+    .card:hover{
+      transform:translateY(-5px);
     }
 
-    .right h2 {
-      font-size: 22px;
-      margin-bottom: 30px;
-      font-weight: 600;
-      color: #333;
+    .card h3{
+      font-size:16px;
+      margin-bottom:10px;
+      color:#555;
     }
 
-    .input-group {
-      margin-bottom: 18px;
+    .card p{
+      font-size:22px;
+      font-weight:600;
+      color:#5f2c82;
     }
 
-    label {
-      font-size: 13px;
-      font-weight: 500;
-      display: block;
-      margin-bottom: 6px;
-      color: #555;
+    .table-section{
+      background:white;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.05);
     }
 
-    input, select {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      outline: none;
-      transition: 0.3s;
-      background: #f9fafb;
+    table{
+      width:100%;
+      border-collapse:collapse;
     }
 
-    input:focus, select:focus {
-      border-color: #5f2c82;
-      box-shadow: 0 0 8px rgba(95,44,130,0.3);
-      background: white;
+    table th, table td{
+      padding:12px;
+      text-align:left;
+      font-size:14px;
     }
 
-    button {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #5f2c82, #49a09d);
-      border: none;
-      color: white;
-      border-radius: 10px;
-      font-size: 15px;
-      cursor: pointer;
-      margin-top: 15px;
-      font-weight: 500;
-      transition: all 0.3s ease;
+    table th{
+      background:#f4f6f9;
+      font-weight:600;
     }
 
-    button:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-      opacity: 0.9;
+    table tr{
+      border-bottom:1px solid #eee;
     }
 
-    .footer {
-      font-size: 12px;
-      margin-top: 18px;
-      color: #888;
-      text-align: center;
+    table tr:hover{
+      background:#f9fafb;
+    }
+
+    .no-data{
+      text-align:center;
+      padding:20px;
+      color:#888;
     }
 
   </style>
@@ -190,75 +145,115 @@
 
 <body>
 
-  <div class="circle circle1"></div>
-  <div class="circle circle2"></div>
+  <div class="sidebar">
+    <h2>Admin Panel</h2>
 
-  <div class="container">
+    <ul class="menu">
+      <li><a href="#">Dashboard</a></li>
+      <li><a href="manage-events.html">Manage Events</a></li>
+      <li><a href="manage-competitions.html">Manage Competitions</a></li>
+      <a href="manage-homescreen.html">Manage Highlights</a>
+      <li><a href="#">View Registrations</a></li>
+      <li><a href="login.html">Logout</a></li>
+    </ul>
+  </div>
 
-    <div class="left">
-      <div class="left-content">
-        <h1>Event Management System</h1>
-        <p>
-          Organize college events, manage competitions,
-          and streamline student participation in one powerful platform.
-          <br><br>
-          Smart • Efficient • Professional
-        </p>
+  <div class="main">
+
+    <div class="topbar">
+      <h1>Dashboard Overview</h1>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Total Events</h3>
+        <p id="totalEvents">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Total Competitions</h3>
+        <p id="totalCompetitions">0</p>
+      </div>
+
+      <div class="card">
+        <h3>Total Registrations</h3>
+        <p id="totalRegistrations">0</p>
       </div>
     </div>
 
-    <div class="right">
-      <h2>Sign in to continue</h2>
+    <div class="table-section">
+      <h3 style="margin-bottom:15px;">Recent Events</h3>
 
-      <div class="input-group">
-        <label>Select Role</label>
-        <select id="role">
-          <option value="">Choose role</option>
-          <option value="admin">Admin</option>
-          <option value="student">Student</option>
-        </select>
-      </div>
-
-      <div class="input-group">
-        <label>Username</label>
-        <input type="text" placeholder="Enter username">
-      </div>
-
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" placeholder="Enter password">
-      </div>
-
-      <button onclick="login()">Login</button>
-
-      <div class="footer">
-        © 2026 College Event Management System
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Event Name</th>
+            <th>Date</th>
+            <th>Venue</th>
+          </tr>
+        </thead>
+        <tbody id="eventsBody"></tbody>
+      </table>
     </div>
 
   </div>
 
-  <script>
-  function login() {
-    const role = document.getElementById("role").value;
-    const username = document.querySelector("input[type='text']").value;
-    const password = document.querySelector("input[type='password']").value;
+  <!-- Firebase Script -->
+  <script type="module">
 
-    // Admin Login
-    if (role === "admin" && username === "admin" && password === "admin123") {
-      window.location.href = "admin-dashboard.html";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 🔥 PASTE YOUR REAL FIREBASE CONFIG HERE
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
+  authDomain: "event-management-system-ea793.firebaseapp.com",
+  projectId: "event-management-system-ea793",
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadDashboard() {
+
+      const eventsSnapshot = await getDocs(collection(db, "events"));
+      const competitionsSnapshot = await getDocs(collection(db, "competitions"));
+      const registrationsSnapshot = await getDocs(collection(db, "registrations"));
+
+      document.getElementById("totalEvents").innerText = eventsSnapshot.size;
+      document.getElementById("totalCompetitions").innerText = competitionsSnapshot.size;
+      document.getElementById("totalRegistrations").innerText = registrationsSnapshot.size;
+
+      const eventsBody = document.getElementById("eventsBody");
+      eventsBody.innerHTML = "";
+
+      if(eventsSnapshot.empty){
+        eventsBody.innerHTML = `
+          <tr>
+            <td colspan="3" class="no-data">No events available</td>
+          </tr>
+        `;
+      } else {
+        eventsSnapshot.forEach(doc => {
+          const event = doc.data();
+
+          eventsBody.innerHTML += `
+            <tr>
+              <td>${event.theme}</td>
+              <td>${event.date}</td>
+              <td>${event.venue}</td>
+            </tr>
+          `;
+        });
+      }
     }
 
-    // Student Login
-    else if (role === "student" && username === "student" && password === "student123") {
-      window.location.href = "student-dashboard.html";
-    }
+    loadDashboard();
 
-    else {
-      alert("Invalid credentials! Please check username, password, and role.");
-    }
-  }
-</script>
+  </script>
 
 </body>
 </html>
