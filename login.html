@@ -238,26 +238,42 @@
 
   </div>
 
-  <script>
-  function login() {
-    const role = document.getElementById("role").value;
-    const username = document.querySelector("input[type='text']").value;
-    const password = document.querySelector("input[type='password']").value;
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const supabaseUrl = "https://oszgllewojvqcbehrtub.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Admin Login
-    if (role === "admin" && username === "admin" && password === "admin123") {
-      window.location.href = "admin-dashboard.html";
-    }
+async function login() {
 
-    // Student Login
-    else if (role === "student" && username === "student" && password === "student123") {
-      window.location.href = "student-dashboard.html";
-    }
+  const role = document.getElementById("role").value;
+  const username = document.querySelector("input[type='text']").value;
+  const password = document.querySelector("input[type='password']").value;
 
-    else {
-      alert("Invalid credentials! Please check username, password, and role.");
-    }
+  if(!role || !username || !password){
+    alert("Please fill all fields");
+    return;
   }
+
+  const { data, error } = await supabaseClient
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .eq('role', role)
+    .single();
+
+  if(error || !data){
+    alert("Invalid credentials");
+    return;
+  }
+
+  if(role === "admin"){
+    window.location.href = "admin-dashboard.html";
+  } else {
+    window.location.href = "student-dashboard.html";
+  }
+}
 </script>
 
 </body>
