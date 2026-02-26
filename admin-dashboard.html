@@ -198,48 +198,45 @@
 
   </div>
 
-  <!-- Firebase Script -->
-  <script type="module">
+  <!-- Supabase Script -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+  const supabaseUrl = "https://oszgllewojvqcbehrtub.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0";
 
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { 
-      getFirestore, 
-      collection, 
-      getDocs 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    // 🔥 PASTE YOUR REAL FIREBASE CONFIG HERE
-    const firebaseConfig = {
-      apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
-  authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793",
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     async function loadDashboard() {
 
-      const eventsSnapshot = await getDocs(collection(db, "events"));
-      const competitionsSnapshot = await getDocs(collection(db, "competitions"));
-      const registrationsSnapshot = await getDocs(collection(db, "registrations"));
+      const { data: events, error: eventsError } =
+        await supabaseClient.from("events").select("*");
 
-      document.getElementById("totalEvents").innerText = eventsSnapshot.size;
-      document.getElementById("totalCompetitions").innerText = competitionsSnapshot.size;
-      document.getElementById("totalRegistrations").innerText = registrationsSnapshot.size;
+      const { data: competitions, error: compError } =
+        await supabaseClient.from("competitions").select("*");
+
+      const { data: registrations, error: regError } =
+        await supabaseClient.from("registrations").select("*");
+
+      document.getElementById("totalEvents").innerText =
+        events ? events.length : 0;
+
+      document.getElementById("totalCompetitions").innerText =
+        competitions ? competitions.length : 0;
+
+      document.getElementById("totalRegistrations").innerText =
+        registrations ? registrations.length : 0;
 
       const eventsBody = document.getElementById("eventsBody");
       eventsBody.innerHTML = "";
 
-      if(eventsSnapshot.empty){
+      if(!events || events.length === 0){
         eventsBody.innerHTML = `
           <tr>
             <td colspan="3" class="no-data">No events available</td>
           </tr>
         `;
       } else {
-        eventsSnapshot.forEach(doc => {
-          const event = doc.data();
-
+        events.forEach(event => {
           eventsBody.innerHTML += `
             <tr>
               <td>${event.theme}</td>
