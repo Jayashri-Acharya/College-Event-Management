@@ -63,7 +63,6 @@
     <input type="text" id="venue" placeholder="Venue">
     <input type="text" id="resourcePerson" placeholder="Resource Person Name (Optional)">
 
-    <!-- Target Audience -->
     <select id="audience">
       <option value="">Select Target Audience</option>
       <option value="1st BCA">1st BCA</option>
@@ -104,21 +103,15 @@
   </table>
 </div>
 
-<script type="module">
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script>
 
-const firebaseConfig = {
-      apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
-  authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793",
-};
+const supabaseUrl = "https://oszgllewojvqcbehrtub.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0";
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const eventsCollection = collection(db,"events");
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 let editId = null;
 
@@ -166,18 +159,28 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   try{
 
     if(editId){
-      await updateDoc(doc(db,"events",editId),
-      {theme,category,club,date,time,venue,resourcePerson,audience,brochureLink});
+
+      await supabaseClient
+        .from("events")
+        .update({theme,category,club,date,time,venue,resourcePerson,audience,brochureLink})
+        .eq("id", editId);
+
       editId = null;
       document.getElementById("submitBtn").innerText = "Add Event";
+
     } else {
-      await addDoc(eventsCollection,
-      {theme,category,club,date,time,venue,resourcePerson,audience,brochureLink});
+
+      await supabaseClient
+        .from("events")
+        .insert([{theme,category,club,date,time,venue,resourcePerson,audience,brochureLink}]);
+
     }
 
     alert("Event Saved Successfully ✅");
+
     document.querySelectorAll("input,select").forEach(el=>el.value="");
     document.getElementById("otherAudience").style.display="none";
+
     loadEvents();
 
   } catch(error){
@@ -189,12 +192,25 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
 /* Load Events */
 async function loadEvents(){
-  const snapshot = await getDocs(eventsCollection);
+
+  const { data } =
+    await supabaseClient.from("events").select("*");
+
   const table = document.getElementById("eventTable");
   table.innerHTML="";
 
-  snapshot.forEach(docItem=>{
-    const e = docItem.data();
+  if(!data || data.length === 0){
+    table.innerHTML = `
+      <tr>
+        <td colspan="10" style="text-align:center;padding:20px;color:#888;">
+          No events available
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  data.forEach(e=>{
 
     table.innerHTML+=`
       <tr>
@@ -212,48 +228,39 @@ async function loadEvents(){
           : "No File"}
         </td>
         <td>
-          <button onclick="editEvent(
-            '${docItem.id}',
-            '${e.theme}',
-            '${e.category}',
-            '${e.club}',
-            '${e.date}',
-            '${e.time}',
-            '${e.venue}',
-            '${e.resourcePerson}',
-            '${e.audience}',
-            '${e.brochureLink}'
-          )">Edit</button>
-
-          <button onclick="deleteEvent('${docItem.id}')">Delete</button>
+          <button onclick="editEvent('${e.id}')">Edit</button>
+          <button onclick="deleteEvent('${e.id}')">Delete</button>
         </td>
       </tr>
     `;
   });
+
 }
 
 /* Edit */
-window.editEvent = function(
-  id, theme, category, club,
-  date, time, venue,
-  resourcePerson, audience, brochureLink
-){
-  document.getElementById("theme").value = theme;
-  document.getElementById("category").value = category;
-  document.getElementById("club").value = club;
-  document.getElementById("date").value = date;
-  document.getElementById("time").value = time;
-  document.getElementById("venue").value = venue;
-  document.getElementById("resourcePerson").value = resourcePerson;
-  document.getElementById("brochureLink").value = brochureLink || "";
+window.editEvent = async function(id){
 
-  if(document.querySelector(`#audience option[value="${audience}"]`)){
-    document.getElementById("audience").value = audience;
+  const { data } =
+    await supabaseClient.from("events").select("*").eq("id", id).single();
+
+  if(!data) return;
+
+  document.getElementById("theme").value = data.theme;
+  document.getElementById("category").value = data.category;
+  document.getElementById("club").value = data.club;
+  document.getElementById("date").value = data.date;
+  document.getElementById("time").value = data.time;
+  document.getElementById("venue").value = data.venue;
+  document.getElementById("resourcePerson").value = data.resourcePerson;
+  document.getElementById("brochureLink").value = data.brochureLink || "";
+
+  if(document.querySelector(`#audience option[value="${data.audience}"]`)){
+    document.getElementById("audience").value = data.audience;
     document.getElementById("otherAudience").style.display="none";
   } else {
     document.getElementById("audience").value="Other";
     document.getElementById("otherAudience").style.display="block";
-    document.getElementById("otherAudience").value=audience;
+    document.getElementById("otherAudience").value=data.audience;
   }
 
   editId = id;
@@ -263,7 +270,7 @@ window.editEvent = function(
 
 /* Delete */
 window.deleteEvent = async function(id){
-  await deleteDoc(doc(db,"events",id));
+  await supabaseClient.from("events").delete().eq("id", id);
   loadEvents();
 };
 
