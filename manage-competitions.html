@@ -40,9 +40,11 @@
   <h1>Manage Competitions</h1>
 
   <div class="form">
-
     <input type="text" id="theme" placeholder="Competition Theme">
-
+  <select id="competitionType" required>
+  <option value="Individual">Individual</option>
+  <option value="Group">Group</option>
+  </select>
     <select id="category">
       <option value="">Select Internal / External</option>
       <option value="Internal">Internal</option>
@@ -64,15 +66,12 @@
       <option value="Other">Other</option>
     </select>
 
-    <!-- Other Event Textbox -->
     <input type="text" id="otherEventInput" placeholder="Enter Other Event Name" style="display:none;">
 
     <input type="date" id="competitionDate">
     <input type="text" id="venue" placeholder="Venue (Optional)">
-
     <textarea id="facultyCoordinator" placeholder="Faculty Coordinator Names"></textarea>
     <textarea id="studentCoordinator" placeholder="Student Coordinator Names (Optional)"></textarea>
-
     <input type="text" id="rulesLink" placeholder="Paste Google Drive Rules Link Here">
 
     <button id="submitBtn">Add Competition</button>
@@ -80,39 +79,32 @@
 
   <table>
     <thead>
-      <tr>
-        <th>Theme</th>
-        <th>Category</th>
-        <th>Club</th>
-        <th>Event</th>
-        <th>Date</th>
-        <th>Venue</th>
-        <th>Faculty Coordinator</th>
-        <th>Student Coordinator</th>
-        <th>Rules</th>
-        <th>Action</th>
-      </tr>
-    </thead>
+<tr>
+  <th>Theme</th>
+  <th>Type</th>
+  <th>Category</th>
+  <th>Club</th>
+  <th>Event</th>
+  <th>Date</th>
+  <th>Venue</th>
+  <th>Faculty Coordinator</th>
+  <th>Student Coordinator</th>
+  <th>Rules</th>
+  <th>Action</th>
+</tr>
+</thead>
     <tbody id="competitionTable"></tbody>
   </table>
 
 </div>
 
-<script type="module">
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-      apiKey: "AIzaSyBMYnOy-iiyxgaZdAd9xdbJSSVbvUKzh7I",
-  authDomain: "event-management-system-ea793.firebaseapp.com",
-  projectId: "event-management-system-ea793",
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const competitionsCollection = collection(db,"competitions");
+const supabaseUrl = "https://oszgllewojvqcbehrtub.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 let editId = null;
 
@@ -138,18 +130,17 @@ document.getElementById("eventSelect").addEventListener("change", function(){
   }
 });
 
-/* Add / Update Competition */
+/* ADD / UPDATE */
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
   const theme = document.getElementById("theme").value;
+  const competition_type = document.getElementById("competitionType").value;
   const category = document.getElementById("category").value;
   const club = document.getElementById("club").value;
 
   let eventId = document.getElementById("eventSelect").value;
   const otherEvent = document.getElementById("otherEventInput").value;
-  if(eventId === "Other"){
-    eventId = otherEvent;
-  }
+  if(eventId === "Other") eventId = otherEvent;
 
   const competitionDate = document.getElementById("competitionDate").value;
   const venue = document.getElementById("venue").value;
@@ -163,27 +154,51 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   }
 
   try{
+
     if(editId){
-      await updateDoc(doc(db,"competitions",editId),{
-        theme, category, club, eventId,
-        competitionDate, venue,
-        facultyCoordinator, studentCoordinator,
-        rulesLink
-      });
+
+      await supabaseClient
+        .from("competitions")
+        .update({
+          theme,
+          competition_type,
+          category,
+          club,
+          eventId,
+          competitionDate,
+          venue,
+          facultyCoordinator,
+          studentCoordinator,
+          rulesLink
+        })
+        .eq("id", editId);
+
       editId = null;
       document.getElementById("submitBtn").innerText = "Add Competition";
+
     } else {
-      await addDoc(competitionsCollection,{
-        theme, category, club, eventId,
-        competitionDate, venue,
-        facultyCoordinator, studentCoordinator,
-        rulesLink
-      });
+
+      await supabaseClient
+        .from("competitions")
+        .insert([{
+          theme,
+          competition_type,
+          category,
+          club,
+          eventId,
+          competitionDate,
+          venue,
+          facultyCoordinator,
+          studentCoordinator,
+          rulesLink
+        }]);
     }
 
     alert("Competition Saved Successfully ✅");
+
     document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
     document.getElementById("otherEventInput").style.display="none";
+
     loadCompetitions();
 
   } catch(error){
@@ -193,18 +208,32 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
 });
 
-/* Load Competitions */
+/* LOAD TABLE */
 async function loadCompetitions(){
-  const snapshot = await getDocs(competitionsCollection);
+
+  const { data, error } =
+    await supabaseClient.from("competitions").select("*");
+
   const table = document.getElementById("competitionTable");
   table.innerHTML="";
 
-  snapshot.forEach(docItem=>{
-    const c = docItem.data();
+  if(!data || data.length === 0){
+    table.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align:center;padding:20px;color:#888;">
+          No competitions available
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  data.forEach(c => {
 
     table.innerHTML += `
       <tr>
         <td>${c.theme}</td>
+        <td>${c.competition_type || "-"}</td>
         <td>${c.category || "-"}</td>
         <td>${c.club || "-"}</td>
         <td>${c.eventId || "-"}</td>
@@ -218,49 +247,40 @@ async function loadCompetitions(){
             : "No Rules"}
         </td>
         <td>
-          <button onclick="editCompetition(
-            '${docItem.id}',
-            '${c.theme}',
-            '${c.category}',
-            '${c.club}',
-            '${c.eventId}',
-            '${c.competitionDate}',
-            '${c.venue}',
-            '${c.facultyCoordinator}',
-            '${c.studentCoordinator}',
-            '${c.rulesLink}'
-          )">Edit</button>
-
-          <button onclick="deleteCompetition('${docItem.id}')">Delete</button>
+          <button onclick="editCompetition('${c.id}')">Edit</button>
+          <button onclick="deleteCompetition('${c.id}')">Delete</button>
         </td>
       </tr>
     `;
   });
+
 }
 
-/* Edit */
-window.editCompetition = function(
-  id, theme, category, club,
-  eventId, competitionDate, venue,
-  facultyCoordinator, studentCoordinator, rulesLink
-){
+/* EDIT */
+window.editCompetition = async function(id){
 
-  document.getElementById("theme").value = theme;
-  document.getElementById("category").value = category;
-  document.getElementById("club").value = club;
-  document.getElementById("competitionDate").value = competitionDate;
-  document.getElementById("venue").value = venue;
-  document.getElementById("facultyCoordinator").value = facultyCoordinator;
-  document.getElementById("studentCoordinator").value = studentCoordinator;
-  document.getElementById("rulesLink").value = rulesLink;
+  const { data } =
+    await supabaseClient.from("competitions").select("*").eq("id", id).single();
 
-  if(document.querySelector(`#eventSelect option[value="${eventId}"]`)){
-    document.getElementById("eventSelect").value = eventId;
+  if(!data) return;
+
+  document.getElementById("theme").value = data.theme;
+  document.getElementById("competitionType").value = data.competition_type;
+  document.getElementById("category").value = data.category;
+  document.getElementById("club").value = data.club;
+  document.getElementById("competitionDate").value = data.competitionDate;
+  document.getElementById("venue").value = data.venue;
+  document.getElementById("facultyCoordinator").value = data.facultyCoordinator;
+  document.getElementById("studentCoordinator").value = data.studentCoordinator;
+  document.getElementById("rulesLink").value = data.rulesLink;
+
+  if(document.querySelector(`#eventSelect option[value="${data.eventId}"]`)){
+    document.getElementById("eventSelect").value = data.eventId;
     document.getElementById("otherEventInput").style.display="none";
   } else {
     document.getElementById("eventSelect").value="Other";
     document.getElementById("otherEventInput").style.display="block";
-    document.getElementById("otherEventInput").value=eventId;
+    document.getElementById("otherEventInput").value=data.eventId;
   }
 
   editId = id;
@@ -268,9 +288,9 @@ window.editCompetition = function(
   window.scrollTo({top:0,behavior:"smooth"});
 };
 
-/* Delete */
-window.deleteCompetition = async (id)=>{
-  await deleteDoc(doc(db,"competitions",id));
+/* DELETE */
+window.deleteCompetition = async function(id){
+  await supabaseClient.from("competitions").delete().eq("id", id);
   loadCompetitions();
 };
 
