@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Student Registration</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+  font-family:'Inter',sans-serif;
+  background:#f4f6f9;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.form-box{
+  background:#e8d9f3;
+  padding:40px;
+  border-radius:12px;
+  width:350px;
+  text-align:center;
+  box-shadow:0 8px 20px rgba(0,0,0,0.1);
+}
+input{
+  width:100%;
+  padding:8px;
+  margin:8px 0;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+.button-group{
+  display:flex;
+  justify-content:space-between;
+  margin-top:15px;
+}
+button{
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+.submit-btn{
+  background:#5f2c82;
+  color:white;
+  margin-right:10px;
+}
+.cancel-btn{
+  background:#999;
+  color:white;
+}
+</style>
+</head>
+
+<body>
+
+<div class="form-box">
+<h2>Student Registration</h2>
+
+<form id="regForm">
+
+  <input id="name" placeholder="Student Name" required>
+  <input id="regno" placeholder="Register Number" required>
+  <input id="dept" placeholder="Department" required>
+  <input id="sem" placeholder="Semester" required>
+  <input id="email" placeholder="Email" required>
+  <input id="contact" placeholder="Contact Number" required>
+
+  <div id="groupField" style="display:none;">
+    <input id="groupName" placeholder="Group Name">
+  </div>
+
+  <div class="button-group">
+    <button type="submit" class="submit-btn">Submit</button>
+    <button type="button" class="cancel-btn" onclick="history.back()">Cancel</button>
+  </div>
+
+</form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+const supabaseClient = supabase.createClient(
+"https://oszgllewojvqcbehrtub.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0"
+
+);
+
+const params = new URLSearchParams(window.location.search);
+const competitionId = params.get("id");
+const type = params.get("type");
+
+/* Show group field */
+if(type === "Group"){
+  document.getElementById("groupField").style.display="block";
+}
+
+document.getElementById("regForm")
+.addEventListener("submit", async function(e){
+
+  e.preventDefault();
+
+  const regno = document.getElementById("regno").value;
+
+  /* Check duplicate */
+  const { data: existing } =
+    await supabaseClient
+      .from("registrations")
+      .select("*")
+      .eq("competition_id", competitionId)
+      .eq("register_number", regno);
+
+  if(existing.length > 0){
+    alert("You already registered for this competition!");
+    return;
+  }
+
+  /* Insert */
+  const { error } =
+    await supabaseClient
+      .from("registrations")
+      .insert([{
+        competition_id: competitionId,
+        student_name: document.getElementById("name").value,
+        register_number: regno,
+        department: document.getElementById("dept").value,
+        semester: document.getElementById("sem").value,
+        email: document.getElementById("email").value,
+        contact_number: document.getElementById("contact").value,
+        group_name: type === "Group"
+          ? document.getElementById("groupName").value
+          : null
+      }]);
+
+  if(error){
+    alert("Error registering");
+  } else {
+    alert("Registered Successfully ✅");
+    window.location.href="student-dashboard.html";
+  }
+
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Event Details</title>
+<style>
+body{font-family:Inter;padding:40px;background:#f4f6f9;}
+.box{background:#e8d9f3;padding:30px;border-radius:12px;}
+button{margin-top:20px;padding:8px 20px;background:#5f2c82;color:white;border:none;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<div class="box" id="details"></div>
+<button onclick="history.back()">Back</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+const supabaseClient = supabase.createClient(
+"https://oszgllewojvqcbehrtub.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0"
+
+);
+
+const id = new URLSearchParams(window.location.search).get("id");
+
+async function load(){
+  const { data } =
+    await supabaseClient.from("events")
+    .select("*").eq("id",id).single();
+
+  document.getElementById("details").innerHTML=`
+    <h2>${data.theme}</h2>
+    <p>Category: ${data.category}</p>
+    <p>Venue: ${data.venue}</p>
+    <p>Date: ${data.date}</p>
+    <p>Time: ${data.time}</p>
+    <p>Audience: ${data.audience}</p>
+  `;
+}
+
+load();
+</script>
+
+</body>
+</html>

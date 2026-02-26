@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Competition Details</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+  font-family:'Inter',sans-serif;
+  padding:40px;
+  background:#f4f6f9;
+  text-align:center;
+}
+.box{
+  background:#e8d9f3;
+  padding:40px;
+  border-radius:12px;
+  margin:30px auto;
+  max-width:600px;
+}
+button{
+  padding:10px 22px;
+  margin:10px;
+  background:#5f2c82;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+button:hover{opacity:0.9;}
+</style>
+</head>
+
+<body>
+
+<h2 id="title"></h2>
+
+<div class="box">
+  <h3>RULES & REGULATIONS</h3>
+  <p id="rules"></p>
+</div>
+
+<button onclick="goRegister()">Register</button>
+<button onclick="history.back()">Back</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+const supabaseClient = supabase.createClient(
+"https://oszgllewojvqcbehrtub.supabase.co",
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0"
+
+);
+
+const id = new URLSearchParams(window.location.search).get("id");
+let competitionType = "Individual";
+
+async function load(){
+
+  const { data } =
+    await supabaseClient
+      .from("competitions")
+      .select("*")
+      .eq("id",id)
+      .single();
+
+  document.getElementById("title").innerText = data.theme;
+  competitionType = data.competition_type;
+
+  document.getElementById("rules").innerHTML =
+    data.rulesLink
+      ? `<a href="${data.rulesLink}" target="_blank">Click here to view rules</a>`
+      : "Rules not available";
+}
+
+function goRegister(){
+  window.location.href =
+    "registration.html?id=" + id +
+    "&type=" + competitionType;
+}
+
+load();
+
+</script>
+
+</body>
+</html>

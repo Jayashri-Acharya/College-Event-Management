@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Event Page</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+    body{background:#f4f6f9;}
+
+    .navbar{
+      background:linear-gradient(135deg,#5f2c82,#49a09d);
+      padding:15px 40px;
+      color:white;
+      display:flex;
+      justify-content:space-between;
+    }
+
+    .container{
+      padding:40px 80px;
+      text-align:center;
+    }
+
+    h2{margin-bottom:25px;}
+
+    /* CENTERED FILTER */
+    .filters{
+      display:flex;
+      justify-content:center;
+      gap:20px;
+      background:#e8d9f3;
+      padding:15px;
+      border-radius:12px;
+      width:fit-content;
+      margin:0 auto 40px auto;
+    }
+
+    .filter-btn{
+      padding:8px 24px;
+      border-radius:8px;
+      border:2px solid #5f2c82;
+      background:white;
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    .filter-btn.active{
+      background:#5f2c82;
+      color:white;
+    }
+
+    /* GRID */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:25px;
+      margin-top:20px;
+    }
+
+    .card{
+      background:#f3e9fb;
+      padding:20px;
+      border-radius:12px;
+      border:2px dashed #5f2c82;
+      text-align:left;
+    }
+
+    .card h3{
+      color:#5f2c82;
+      margin-bottom:8px;
+    }
+
+    .card p{
+      font-size:13px;
+      margin-bottom:4px;
+    }
+
+    .view-btn{
+      margin-top:12px;
+      padding:6px 16px;
+      background:#7b3db8;
+      color:white;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <div>🎓 College Logo</div>
+  <div>Events</div>
+</div>
+
+<div class="container">
+
+  <h2>Event Page</h2>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('ALL', this)">ALL</button>
+    <button class="filter-btn" onclick="setFilter('Internal', this)">INTERNAL</button>
+    <button class="filter-btn" onclick="setFilter('External', this)">EXTERNAL</button>
+  </div>
+
+  <div class="grid" id="cardGrid"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const supabaseUrl = "https://oszgllewojvqcbehrtub.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+let allData = [];
+let currentFilter = "ALL";
+
+/* LOAD BOTH TABLES */
+async function loadData(){
+
+  const { data: events } =
+    await supabaseClient.from("events").select("*");
+
+  const { data: competitions } =
+    await supabaseClient.from("competitions").select("*");
+
+  allData = [];
+
+  if(events){
+    events.forEach(e=>{
+      allData.push({...e, type:"Event"});
+    });
+  }
+
+  if(competitions){
+    competitions.forEach(c=>{
+      allData.push({...c, type:"Competition"});
+    });
+  }
+
+  renderCards();
+}
+
+/* FILTER */
+function setFilter(type, btn){
+  currentFilter = type;
+
+  document.querySelectorAll(".filter-btn")
+    .forEach(b=>b.classList.remove("active"));
+
+  btn.classList.add("active");
+
+  renderCards();
+}
+
+/* RENDER */
+function renderCards(){
+
+  const grid = document.getElementById("cardGrid");
+  grid.innerHTML="";
+
+  let filtered = allData.filter(item=>{
+    if(currentFilter === "ALL") return true;
+    return item.category === currentFilter;
+  });
+
+  if(filtered.length === 0){
+    grid.innerHTML="<p>No data available</p>";
+    return;
+  }
+
+  filtered.forEach(item=>{
+
+    const title = item.theme;
+    const venue = item.venue || "-";
+    const date = item.date || item.competitiondate || "-";
+
+    const card = document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+      <h3>${item.club || "External"}</h3>
+      <p><strong>${title}</strong></p>
+      <p>${venue}</p>
+      <p>${date}</p>
+      <button class="view-btn"
+        onclick="viewItem('${item.id}','${item.type}')">
+        View
+      </button>
+    `;
+
+    grid.appendChild(card);
+  });
+
+}
+
+/* VIEW BUTTON */
+function viewItem(id,type){
+
+  if(type === "Competition"){
+    window.location.href =
+      "competition-details.html?id="+id;
+  } else {
+    window.location.href =
+      "event-details.html?id="+id;
+  }
+
+}
+
+loadData();
+
+</script>
+
+</body>
+</html>
