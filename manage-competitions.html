@@ -41,10 +41,17 @@
 
   <div class="form">
     <input type="text" id="theme" placeholder="Competition Theme">
-  <select id="competitionType" required>
-  <option value="Individual">Individual</option>
-  <option value="Group">Group</option>
-  </select>
+
+    <select id="competitionType" required>
+      <option value="Individual">Individual</option>
+      <option value="Group">Group</option>
+    </select>
+
+    <!-- Team Limit (NEW) -->
+    <div id="teamLimitContainer" style="display:none;">
+      <input type="number" id="teamLimit" placeholder="Team Member Limit">
+    </div>
+
     <select id="category">
       <option value="">Select Internal / External</option>
       <option value="Internal">Internal</option>
@@ -72,33 +79,31 @@
     <input type="text" id="venue" placeholder="Venue (Optional)">
     <textarea id="facultyCoordinator" placeholder="Faculty Coordinator Names"></textarea>
     <textarea id="studentCoordinator" placeholder="Student Coordinator Names (Optional)"></textarea>
-    <input type="text" id="rulesLink" placeholder="Paste Google Drive Rules Link Here">
+    <input type="file" id="rulesFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
 
     <button id="submitBtn">Add Competition</button>
   </div>
 
   <table>
     <thead>
-<tr>
-  <th>Theme</th>
-  <th>Type</th>
-  <th>Category</th>
-  <th>Club</th>
-  <th>Event</th>
-  <th>Date</th>
-  <th>Venue</th>
-  <th>Faculty Coordinator</th>
-  <th>Student Coordinator</th>
-  <th>Rules</th>
-  <th>Action</th>
-</tr>
-</thead>
+      <tr>
+        <th>Theme</th>
+        <th>Type</th>
+        <th>Category</th>
+        <th>Club</th>
+        <th>Event</th>
+        <th>Date</th>
+        <th>Venue</th>
+        <th>Faculty Coordinator</th>
+        <th>Student Coordinator</th>
+        <th>Rules</th>
+        <th>Action</th>
+      </tr>
+    </thead>
     <tbody id="competitionTable"></tbody>
   </table>
-
 </div>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
@@ -107,6 +112,17 @@ const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 let editId = null;
+
+/* Show team limit only for Group */
+document.getElementById("competitionType").addEventListener("change", function(){
+  const teamBox = document.getElementById("teamLimitContainer");
+  if(this.value === "Group"){
+    teamBox.style.display = "block";
+  } else {
+    teamBox.style.display = "none";
+    document.getElementById("teamLimit").value="";
+  }
+});
 
 /* Hide club if External */
 document.getElementById("category").addEventListener("change", function(){
@@ -135,6 +151,11 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
   const theme = document.getElementById("theme").value;
   const competition_type = document.getElementById("competitionType").value;
+  const team_limit =
+    competition_type === "Group"
+    ? document.getElementById("teamLimit").value
+    : null;
+
   const category = document.getElementById("category").value;
   const club = document.getElementById("club").value;
 
@@ -146,72 +167,74 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
   const venue = document.getElementById("venue").value;
   const facultyCoordinator = document.getElementById("facultyCoordinator").value;
   const studentCoordinator = document.getElementById("studentCoordinator").value;
-  const rulesLink = document.getElementById("rulesLink").value;
+  let rulesLink = null;
+
+const rulesFile = document.getElementById("rulesFile").files[0];
+
+if(rulesFile){
+
+  const fileName = Date.now() + "_" + rulesFile.name;
+
+  const { data, error } = await supabaseClient
+    .storage
+    .from("rules")
+    .upload(fileName, rulesFile);
+
+  if(error){
+    alert("Error uploading rules file");
+    return;
+  }
+
+  const { data: publicUrl } = supabaseClient
+    .storage
+    .from("rules")
+    .getPublicUrl(fileName);
+
+  rulesLink = publicUrl.publicUrl;
+}
 
   if(!theme || !category || !competitionDate){
     alert("Please fill required fields");
     return;
   }
 
-  try{
+  if(editId){
+    await supabaseClient.from("competitions")
+      .update({
+        theme, competition_type, team_limit,
+        category, club, eventId,
+        competitionDate, venue,
+        facultyCoordinator, studentCoordinator,
+        rulesLink
+      })
+      .eq("id", editId);
 
-    if(editId){
-
-      await supabaseClient
-        .from("competitions")
-        .update({
-          theme,
-          competition_type,
-          category,
-          club,
-          eventId,
-          competitionDate,
-          venue,
-          facultyCoordinator,
-          studentCoordinator,
-          rulesLink
-        })
-        .eq("id", editId);
-
-      editId = null;
-      document.getElementById("submitBtn").innerText = "Add Competition";
-
-    } else {
-
-      await supabaseClient
-        .from("competitions")
-        .insert([{
-          theme,
-          competition_type,
-          category,
-          club,
-          eventId,
-          competitionDate,
-          venue,
-          facultyCoordinator,
-          studentCoordinator,
-          rulesLink
-        }]);
-    }
-
-    alert("Competition Saved Successfully ✅");
-
-    document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
-    document.getElementById("otherEventInput").style.display="none";
-
-    loadCompetitions();
-
-  } catch(error){
-    console.error(error);
-    alert("Error saving competition");
+    editId = null;
+    document.getElementById("submitBtn").innerText = "Add Competition";
+  } else {
+    await supabaseClient.from("competitions")
+      .insert([{
+        theme, competition_type, team_limit,
+        category, club, eventId,
+        competitionDate, venue,
+        facultyCoordinator, studentCoordinator,
+        rulesLink
+      }]);
   }
 
+  alert("Competition Saved Successfully ✅");
+
+  document.querySelectorAll("input,select,textarea").forEach(el=>el.value="");
+  document.getElementById("otherEventInput").style.display="none";
+  document.getElementById("teamLimitContainer").style.display="none";
+
+  loadCompetitions();
 });
 
 /* LOAD TABLE */
 async function loadCompetitions(){
 
-  const { data, error } =
+  const { data } =
     await supabaseClient.from("competitions").select("*");
 
   const table = document.getElementById("competitionTable");
@@ -230,10 +253,15 @@ async function loadCompetitions(){
 
   data.forEach(c => {
 
+    const typeDisplay =
+      c.competition_type === "Group"
+        ? `Group (${c.team_limit || 0})`
+        : c.competition_type;
+
     table.innerHTML += `
       <tr>
         <td>${c.theme}</td>
-        <td>${c.competition_type || "-"}</td>
+        <td>${typeDisplay}</td>
         <td>${c.category || "-"}</td>
         <td>${c.club || "-"}</td>
         <td>${c.eventId || "-"}</td>
@@ -253,14 +281,16 @@ async function loadCompetitions(){
       </tr>
     `;
   });
-
 }
 
 /* EDIT */
 window.editCompetition = async function(id){
 
   const { data } =
-    await supabaseClient.from("competitions").select("*").eq("id", id).single();
+    await supabaseClient.from("competitions")
+      .select("*")
+      .eq("id", id)
+      .single();
 
   if(!data) return;
 
@@ -274,6 +304,11 @@ window.editCompetition = async function(id){
   document.getElementById("studentCoordinator").value = data.studentCoordinator;
   document.getElementById("rulesLink").value = data.rulesLink;
 
+  if(data.competition_type === "Group"){
+    document.getElementById("teamLimitContainer").style.display="block";
+    document.getElementById("teamLimit").value = data.team_limit;
+  }
+
   if(document.querySelector(`#eventSelect option[value="${data.eventId}"]`)){
     document.getElementById("eventSelect").value = data.eventId;
     document.getElementById("otherEventInput").style.display="none";
@@ -285,6 +320,7 @@ window.editCompetition = async function(id){
 
   editId = id;
   document.getElementById("submitBtn").innerText = "Update Competition";
+
   window.scrollTo({top:0,behavior:"smooth"});
 };
 
@@ -297,6 +333,5 @@ window.deleteCompetition = async function(id){
 loadCompetitions();
 
 </script>
-
 </body>
 </html>
