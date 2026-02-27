@@ -17,6 +17,7 @@ body{
   border-radius:12px;
   margin:30px auto;
   max-width:600px;
+  text-align:left;
 }
 button{
   padding:10px 22px;
@@ -28,6 +29,20 @@ button{
   cursor:pointer;
 }
 button:hover{opacity:0.9;}
+.detail p{
+  margin:8px 0;
+}
+img{
+  max-width:100%;
+  margin-top:10px;
+  border-radius:8px;
+}
+iframe{
+  width:100%;
+  height:400px;
+  margin-top:10px;
+  border-radius:8px;
+}
 </style>
 </head>
 
@@ -35,10 +50,7 @@ button:hover{opacity:0.9;}
 
 <h2 id="title"></h2>
 
-<div class="box">
-  <h3>RULES & REGULATIONS</h3>
-  <p id="rules"></p>
-</div>
+<div class="box detail" id="details"></div>
 
 <button onclick="goRegister()">Register</button>
 <button onclick="history.back()">Back</button>
@@ -49,11 +61,27 @@ button:hover{opacity:0.9;}
 const supabaseClient = supabase.createClient(
 "https://oszgllewojvqcbehrtub.supabase.co",
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zemdsbGV3b2p2cWNiZWhydHViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjYzODIsImV4cCI6MjA4NzYwMjM4Mn0.Doz6ApUcY1HLsAx7HH1EX1Lx0QNLg7R3gl12jLfsmD0"
-
 );
 
 const id = new URLSearchParams(window.location.search).get("id");
 let competitionType = "Individual";
+
+function renderFile(url){
+
+  if(!url) return "Rules not available";
+
+  const lower = url.toLowerCase();
+
+  if(lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")){
+    return `<img src="${url}" alt="Rules Image">`;
+  }
+
+  if(lower.endsWith(".pdf")){
+    return `<iframe src="${url}"></iframe>`;
+  }
+
+  return `<a href="${url}" target="_blank">Download Rules File</a>`;
+}
 
 async function load(){
 
@@ -67,10 +95,16 @@ async function load(){
   document.getElementById("title").innerText = data.theme;
   competitionType = data.competition_type;
 
-  document.getElementById("rules").innerHTML =
-    data.rulesLink
-      ? `<a href="${data.rulesLink}" target="_blank">Click here to view rules</a>`
-      : "Rules not available";
+  document.getElementById("details").innerHTML = `
+    <p><strong>Competition Type:</strong> ${data.competition_type}</p>
+    <p><strong>Date:</strong> ${data.competitionDate || "-"}</p>
+    <p><strong>Time:</strong> ${data.time || "-"}</p>
+    <p><strong>Venue:</strong> ${data.venue || "-"}</p>
+    <p><strong>Faculty Coordinator:</strong> ${data.facultyCoordinator || "-"}</p>
+    <p><strong>Student Coordinator:</strong> ${data.studentCoordinator || "-"}</p>
+    <p><strong>Rules & Regulations:</strong></p>
+    ${renderFile(data.rulesLink)}
+  `;
 }
 
 function goRegister(){
