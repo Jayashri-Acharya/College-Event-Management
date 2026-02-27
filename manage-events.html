@@ -79,7 +79,7 @@
 
     <input type="text" id="otherAudience" placeholder="Enter Custom Audience" style="display:none;">
 
-    <input type="text" id="brochureLink" placeholder="Paste Google Drive Brochure Link Here">
+    <input type="file" id="brochureFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
 
     <button id="submitBtn">Add Event</button>
   </div>
@@ -103,7 +103,6 @@
   </table>
 </div>
 
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -115,13 +114,11 @@ const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 let editId = null;
 
-/* Hide club if External */
 document.getElementById("category").addEventListener("change", function(){
   document.getElementById("clubContainer").style.display =
   this.value === "External" ? "none" : "block";
 });
 
-/* Show textbox if Other audience selected */
 document.getElementById("audience").addEventListener("change", function(){
   const otherInput = document.getElementById("otherAudience");
   if(this.value === "Other"){
@@ -132,7 +129,6 @@ document.getElementById("audience").addEventListener("change", function(){
   }
 });
 
-/* Add / Update Event */
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
   const theme = document.getElementById("theme").value;
@@ -145,73 +141,70 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
   let audience = document.getElementById("audience").value;
   const otherAudience = document.getElementById("otherAudience").value;
-  if(audience === "Other"){
-    audience = otherAudience;
-  }
+  if(audience === "Other"){ audience = otherAudience; }
 
-  const brochureLink = document.getElementById("brochureLink").value;
+  let brochureLink = null;
+  const brochureFile = document.getElementById("brochureFile").files[0];
+
+  if(brochureFile){
+    const fileName = Date.now() + "_" + brochureFile.name;
+
+    const { error } = await supabaseClient
+      .storage
+      .from("brochures")
+      .upload(fileName, brochureFile, { upsert: true });
+
+    if(error){
+      alert("Error uploading brochure");
+      return;
+    }
+
+    const { data: publicUrl } = supabaseClient
+      .storage
+      .from("brochures")
+      .getPublicUrl(fileName);
+
+    brochureLink = publicUrl.publicUrl;
+  }
 
   if(!theme || !category || !date || !time || !venue){
     alert("Please fill required fields");
     return;
   }
 
-  try{
+  if(editId){
+    await supabaseClient
+      .from("events")
+      .update({theme,category,club,date,time,venue,resourcePerson,audience,brochureLink})
+      .eq("id", editId);
 
-    if(editId){
-
-      await supabaseClient
-        .from("events")
-        .update({theme,category,club,date,time,venue,resourcePerson,audience,brochureLink})
-        .eq("id", editId);
-
-      editId = null;
-      document.getElementById("submitBtn").innerText = "Add Event";
-
-    } else {
-
-      await supabaseClient
-        .from("events")
-        .insert([{theme,category,club,date,time,venue,resourcePerson,audience,brochureLink}]);
-
-    }
-
-    alert("Event Saved Successfully ✅");
-
-    document.querySelectorAll("input,select").forEach(el=>el.value="");
-    document.getElementById("otherAudience").style.display="none";
-
-    loadEvents();
-
-  } catch(error){
-    console.error(error);
-    alert("Error saving event");
+    editId = null;
+    document.getElementById("submitBtn").innerText = "Add Event";
+  } else {
+    await supabaseClient
+      .from("events")
+      .insert([{theme,category,club,date,time,venue,resourcePerson,audience,brochureLink}]);
   }
 
+  alert("Event Saved Successfully ✅");
+
+  document.querySelectorAll("input,select").forEach(el=>el.value="");
+  document.getElementById("otherAudience").style.display="none";
+
+  loadEvents();
 });
 
-/* Load Events */
 async function loadEvents(){
-
-  const { data } =
-    await supabaseClient.from("events").select("*");
-
+  const { data } = await supabaseClient.from("events").select("*");
   const table = document.getElementById("eventTable");
   table.innerHTML="";
 
   if(!data || data.length === 0){
-    table.innerHTML = `
-      <tr>
-        <td colspan="10" style="text-align:center;padding:20px;color:#888;">
-          No events available
-        </td>
-      </tr>
-    `;
+    table.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:#888;">No events available</td></tr>`;
     return;
   }
 
   data.forEach(e=>{
-
     table.innerHTML+=`
       <tr>
         <td>${e.theme}</td>
@@ -234,15 +227,10 @@ async function loadEvents(){
       </tr>
     `;
   });
-
 }
 
-/* Edit */
 window.editEvent = async function(id){
-
-  const { data } =
-    await supabaseClient.from("events").select("*").eq("id", id).single();
-
+  const { data } = await supabaseClient.from("events").select("*").eq("id", id).single();
   if(!data) return;
 
   document.getElementById("theme").value = data.theme;
@@ -252,7 +240,6 @@ window.editEvent = async function(id){
   document.getElementById("time").value = data.time;
   document.getElementById("venue").value = data.venue;
   document.getElementById("resourcePerson").value = data.resourcePerson;
-  document.getElementById("brochureLink").value = data.brochureLink || "";
 
   if(document.querySelector(`#audience option[value="${data.audience}"]`)){
     document.getElementById("audience").value = data.audience;
@@ -268,7 +255,6 @@ window.editEvent = async function(id){
   window.scrollTo({top:0,behavior:"smooth"});
 };
 
-/* Delete */
 window.deleteEvent = async function(id){
   await supabaseClient.from("events").delete().eq("id", id);
   loadEvents();
